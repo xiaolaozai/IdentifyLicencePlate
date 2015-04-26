@@ -1,0 +1,6 @@
+﻿  getSource.cpp
+  IdentifyLicencePlate1.cpp
+e:\myprojects\vsc++project\identifylicenceplate1\identifylicenceplate1\identifylicenceplate1.cpp(250): warning C4244: “参数”: 从“double”转换到“int”，可能丢失数据
+e:\myprojects\vsc++project\identifylicenceplate1\identifylicenceplate1\identifylicenceplate1.cpp(251): warning C4244: “参数”: 从“double”转换到“int”，可能丢失数据
+  正在生成代码...
+  IdentifyLicencePlate1.vcxproj -> E:\MyProjects\VSC++Project\IdentifyLicencePlate1\Debug\IdentifyLicencePlate1.exe
