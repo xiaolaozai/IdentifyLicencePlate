@@ -322,7 +322,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	}
 	cvReleaseImage(&pImg_contour);
 	cvReleaseImage(&pImg_threshold);
-	//cvReleaseImage(&pImg_adaptivethreshold);
 	cvReleaseImage(&pImg_dilate);
 	cvReleaseImage(&pImg_sobel);
 	cvReleaseImage(&pImg_stretch);
