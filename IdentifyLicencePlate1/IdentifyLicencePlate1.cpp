@@ -4,6 +4,7 @@
 #include "FileOperation.h"
 #include "IplImageProcessing.h"
 #include "getSource.h"
+#include "IdentifyCharSVM.h"
 
 int _tmain(int argc, _TCHAR* argv[])
 {
@@ -13,6 +14,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	**********************/
 	IplImageProcessing* pImgProcess=new IplImageProcessing();//图片操作类
 	getSource* pSrc=new getSource();//资源路径类
+	IdentifyCharSVM* pSVM=new IdentifyCharSVM();//字符识别类
 
 	IplImage* pImg_src=cvLoadImage(pSrc->getImgpath(),CV_LOAD_IMAGE_COLOR);
 	IplImage* pImg_gray = cvCreateImage(cvGetSize(pImg_src), IPL_DEPTH_8U,1);
@@ -264,7 +266,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 
 	//字符识别
-
+	pSVM->test();
 
 
 	/**********************
@@ -328,6 +330,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	cvReleaseImage(&pImg_smooth);
 	cvReleaseImage(&pImg_gray);
 	cvReleaseImage(&pImg_src);
+	delete pSVM;
 	delete pSrc;
 	delete pImgProcess;
 	return 0;
