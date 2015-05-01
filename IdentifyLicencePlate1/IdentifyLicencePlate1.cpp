@@ -5,6 +5,8 @@
 #include "IplImageProcessing.h"
 #include "getSource.h"
 #include "IdentifyCharSVM.h"
+#include "PlateChar.h"
+#include "IdentifyCharANN.h"
 
 int _tmain(int argc, _TCHAR* argv[])
 {
@@ -14,7 +16,9 @@ int _tmain(int argc, _TCHAR* argv[])
 	**********************/
 	IplImageProcessing* pImgProcess=new IplImageProcessing();//图片操作类
 	getSource* pSrc=new getSource();//资源路径类
-	IdentifyCharSVM* pSVM=new IdentifyCharSVM();//字符识别类
+	IdentifyCharSVM* pSVM=new IdentifyCharSVM();//svm字符识别类
+	PlateChar* pPlate=new PlateChar();//车牌字符类
+	IdentifyCharANN *pAnn=new IdentifyCharANN();//ann字符识别类
 
 	IplImage* pImg_src=cvLoadImage(pSrc->getImgpath(),CV_LOAD_IMAGE_COLOR);
 	IplImage* pImg_gray = cvCreateImage(cvGetSize(pImg_src), IPL_DEPTH_8U,1);
@@ -103,7 +107,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		rect2=list_rects.front();
 		pImg_selectColor=cvCreateImage(cvSize(rect2.width,rect2.height),IPL_DEPTH_8U,3);
 		cvSetImageROI(pImg_src,rect2);
-		cvCopyImage(pImg_src,pImg_selectColor);
+		cvCopy(pImg_src,pImg_selectColor);
 		cvResetImageROI(pImg_src);
 		cvShowImage("pImg_selectColor",pImg_selectColor);
 		//寻找精确轮廓
@@ -128,7 +132,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			int nWidth=x2-x1-2*nHorK,nHeight=y2-y1-2*nVerK;//行列宽高
 			pImg_selectLicence=cvCreateImage(cvSize(nWidth,nHeight),IPL_DEPTH_8U,3);
 			cvSetImageROI(pImg_src,cvRect(rect2.x+x1+nHorK,rect2.y+y1+nVerK,nWidth,nHeight));
-			cvCopyImage(pImg_src,pImg_selectLicence);
+			cvCopy(pImg_src,pImg_selectLicence);
 			cvResetImageROI(pImg_src);
 			cvShowImage("pImg_selectLicence",pImg_selectLicence);
 			//寻找底色
@@ -174,6 +178,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	IplImage* pImg_LicenceThreshold=NULL;
 	IplImage* pImg_LicenceGray2=NULL;
 	IplImage* pImg_LicenceChar[7];//存放车牌字符
+	IplImage* pImg_Plate[7];//存放归一化后车牌字符
 	if(pImg_selectLicence!=NULL)
 	{
 		//归一化车牌图像大小
@@ -222,7 +227,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		{
 			pImg_LicenceChar[k]=cvCreateImage(cvSize(20,25),IPL_DEPTH_8U,1);
 			cvSetImageROI(pImg_LicenceGray2,cvRect(0,4,20,25));
-			cvCopyImage(pImg_LicenceGray2,pImg_LicenceChar[k]);
+			cvCopy(pImg_LicenceGray2,pImg_LicenceChar[k]);
 			cvResetImageROI(pImg_LicenceGray2);
 			if(colorType==1||colorType==2)//底色为浅色时（白或黄）取反操作
 			{
@@ -266,7 +271,7 @@ int _tmain(int argc, _TCHAR* argv[])
 				pImg_LicenceChar[k]=cvCreateImage(cvSize(rect_temp.width,rect_temp.height),IPL_DEPTH_8U,1);
 				cvSetImageROI(pImg_LicenceGray2,rect_temp);
 			}
-			cvCopyImage(pImg_LicenceGray2,pImg_LicenceChar[k]);
+			cvCopy(pImg_LicenceGray2,pImg_LicenceChar[k]);
 			cvResetImageROI(pImg_LicenceGray2);
 			if(colorType==1||colorType==2)//底色为浅色时（白或黄）取反操作
 			{
@@ -279,11 +284,65 @@ int _tmain(int argc, _TCHAR* argv[])
 			cvShowImage(name_LicenceChar[k],pImg_LicenceChar[k]);
 			k++;
 		}
+		//归一化字符图片大小
+		for(int i=0;i<7&&i<k;i++)
+		{
+			char name[64];
+			Mat mat_resize=pPlate->reSizeChar(pImg_LicenceChar[i],20,20);//大小都为20*20
+			IplImage *pImg_tmp=&IplImage(mat_resize);
+			sprintf(name,"../img_model/test/%d.jpg",(i+1));
+			cvSaveImage(name,pImg_tmp);
+			pImg_Plate[i]=cvLoadImage(name,CV_LOAD_IMAGE_GRAYSCALE);
+			//cvShowImage(name,pImg_Plate[i]);
+			//imwrite(filename,mat_resize);//出错
+		}
+
+		//zifushibie
+		////pAnn->setTrainFile(pSrc->getImageTrainPath(),"char",pSrc->getXMLTrainPath());
+		////设置训练分类器xml文件
+		//pSVM->setTrainFile(pSrc->getImageTrainPath(),pSrc->getXMLTrainPath(),"chn");
+		//pSVM->setTrainFile(pSrc->getImageTrainPath(),pSrc->getXMLTrainPath(),"letter");
+		//pSVM->setTrainFile(pSrc->getImageTrainPath(),pSrc->getXMLTrainPath(),"num");
+		//pSVM->setTrainFile(pSrc->getImageTrainPath(),pSrc->getXMLTrainPath(),"num_letter");
+		string chn[]={"川","晋","京","军","苏","粤"};
+		string letter[]={"A","B","H","N","V","Z"};
+		string num[]={"0","1","2","3","5","6","7","8","9"};
+		string num_letter[]={"0","1","2","3","5","6","7","8","9","A","B","H","N","V","Z"};
+
+		//第一个字符，使用汉字分类器
+		int p=pSVM->getPredictPosition(pImg_Plate[0],pSrc->getXMLTrainPath(),"chn");
+		//cout<<"p="<<p<<endl;
+		cout<<"第一个字符为："<<chn[p-2]<<endl;
+
+		//第二个字符，使用字母分类器
+		p=pSVM->getPredictPosition(pImg_Plate[1],pSrc->getXMLTrainPath(),"letter");
+		//cout<<"p="<<p<<endl;
+		cout<<"第二个字符为："<<letter[p-2]<<endl;
+
+		//第三个字符，使用数字+字母分类器
+		p=pSVM->getPredictPosition(pImg_Plate[2],pSrc->getXMLTrainPath(),"num_letter");
+		cout<<"第三个字符为："<<num_letter[p-2]<<endl;
+
+		//第四个字符，使用数字+字母分类器
+		p=pSVM->getPredictPosition(pImg_Plate[3],pSrc->getXMLTrainPath(),"num_letter");
+		cout<<"第四个字符为："<<num_letter[p-2]<<endl;
+
+		//第五个字符，使用数字分类器
+		p=pSVM->getPredictPosition(pImg_Plate[4],pSrc->getXMLTrainPath(),"num");
+		cout<<"第五个字符为："<<num[p-2]<<endl;
+
+		//第六个字符，使用数字分类器
+		p=pSVM->getPredictPosition(pImg_Plate[5],pSrc->getXMLTrainPath(),"num");
+		cout<<"第六个字符为："<<num[p-2]<<endl;
+
+		//第七个字符，使用数字分类器
+		p=pSVM->getPredictPosition(pImg_Plate[6],pSrc->getXMLTrainPath(),"num");
+		cout<<"第七个字符为："<<num[p-2]<<endl;
 	}
 
 
 	//字符识别
-	//pSVM->test();
+	//pAnn->testRead();
 
 
 	/**********************
@@ -351,6 +410,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	delete pSVM;
 	delete pSrc;
 	delete pImgProcess;
+	delete pPlate;
+	delete pAnn;
 	return 0;
 }
 

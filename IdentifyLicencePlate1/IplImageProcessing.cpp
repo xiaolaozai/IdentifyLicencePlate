@@ -503,7 +503,7 @@ IplImage* IplImageProcessing::myCutImage(IplImage* src,IplImage* dst,CvRect rect
 		return NULL;
 	}
 	cvSetImageROI(src,rect);
-	cvCopyImage(src,dst);
+	cvCopy(src,dst);
 	cvResetImageROI(src);
 	//cvShowImage("myCutImage",dst);
 

@@ -1,6 +1,6 @@
 #include "StdAfx.h"
 #include "IdentifyCharSVM.h"
-
+#include "PlateChar.h"
 
 IdentifyCharSVM::IdentifyCharSVM(void)
 {
@@ -70,13 +70,52 @@ void IdentifyCharSVM::test()
 		data[i*2+1]=float(pts[i].y)/size;
 	}
 	//分配矩阵空间
+	//1）设置训练样本集
+    /**
+	需要两组数据，一组是数据的类别res[]，一组是数据的向量信息data[]。
+	**/
 	cvInitMatHeader(&data_mat,s,2,CV_32FC1,data);
 	cvInitMatHeader(&res_mat,s,1,CV_32SC1,res);
 	
+	//2）设置SVM参数
+	/**
+	利用CvSVMParams类实现类内的成员变量svm_type表示SVM类型：
+
+	CvSVM：：C_SVC  C-SVC
+
+	CvSVM：：NU_SVC v-SVC
+
+	CvSVM：：ONE_CLASS 一类SVM
+
+	CvSVM：：EPS_SVR e-SVR
+
+	CvSVM：：NU_SVR v-SVR
+
+	成员变量kernel_type表示核函数的类型：
+
+	CvSVM：：LINEAR 线性：u‘v
+
+	CvSVM：：POLY 多项式：(r*u'v + coef0)^degree
+
+	CvSVM：：RBF RBF函数：exp(-r|u-v|^2)
+
+	CvSVM：：SIGMOID sigmoid函数：tanh(r*u'v + coef0)
+
+	成员变量degree针对多项式核函数degree的设置，
+	gamma针对多项式/rbf/sigmoid核函数的设置，
+	coef0针对多项式/sigmoid核函数的设置，
+	Cvalue为损失函数，在C-SVC、e-SVR、v-SVR中有效，nu设置v-SVC、一类SVM和v-SVR参数，
+	p为设置e-SVR中损失函数的值，class_weightsC_SVC的权重，
+	term_crit为SVM训练过程的终止条件。
+	其中默认值degree = 0，gamma = 1，coef0 = 0，Cvalue = 1，nu = 0，p = 0，class_weights = 0
+	**/
 	criteria=cvTermCriteria(CV_TERMCRIT_EPS,1000,FLT_EPSILON);//停止迭代的标准,传入
 	param=CvSVMParams(CvSVM::C_SVC,CvSVM::RBF,10.0,8.0,1.0,10.0,0.5,0.1,NULL,criteria);
 
-	//训练
+	//3）训练SVM
+	/**
+	调用CvSVM：：train函数建立SVM模型，第一个参数为训练数据，第二个参数为分类结果，最后一个参数即CvSVMParams
+	**/
 	svm.train(&data_mat,&res_mat,NULL,NULL,param);
 
 	//学习结果 描画
@@ -88,6 +127,10 @@ void IdentifyCharSVM::test()
 			float ret=0.0;
 			float a[]={float(j)/size,float(i)/size};
 			cvInitMatHeader(&m,1,2,CV_32FC1,a);//分配矩阵空间
+			//4）用这个SVM进行分类
+			/**
+			调用函数CvSVM：：predict实现分类
+			**/
 			ret=svm.predict(&m);
 			switch((int)ret)
 			{
@@ -125,7 +168,10 @@ void IdentifyCharSVM::test()
 		cvLine(pImg,cvPoint(pts[i].x+2,pts[i].y-2),cvPoint(pts[i].x-2,pts[i].y+2),rcolor);
 	}
 
-	//绘制支持向量
+	//5）获得支持向量
+	/**
+	除了分类，也可以得到SVM的支持向量，调用函数CvSVM：：get_support_vector_count获得支持向量的个数，CvSVM：：get_support_vector获得对应的索引编号的支持向量。
+	**/
 	sv_num=svm.get_support_vector_count();
 	for(i=0;i<sv_num;i++)
 	{
@@ -140,147 +186,464 @@ void IdentifyCharSVM::test()
 	cvReleaseImage(&pImg);
 }
 
-void IdentifyCharSVM::readFaceSVMStudy()
-{
-	const int pImage_num=500;//正集图片数量
-	const int nImage_num=1000;//负集图片数量
-	const int allImage_num=pImage_num+nImage_num;//总图片数量
+/****************************************
+plateSVMTrain
+设置车牌训练集文件
 
+dir_path
+文件夹路径
+
+xml_path
+xml文件保存路径
+
+dir_type
+文件夹类型，plate
+
+******************************************/
+void IdentifyCharSVM::plateSVMTrain(string dir_path,string xml_path,string dir_type)
+{
 	int i,j,ii,jj;
-	int width=28,height=30;//图像大小
-	int image_dim=width*height;
+	const int width=144,height=33;//统一图像大小
+	const int image_dim=width*height;
 	IplImage *pImg_org;
 	IplImage *pImg_spl;
-	int res[allImage_num];
-	float data[allImage_num*allImage_num];
-	CvMat data_mat,res_mat;
-	CvTermCriteria criteria;
+	vector<int> resLabels;//记录数据类别
+	vector<float> dataLabels;//记录数据向量信息
+	Mat data_mat,res_mat;
+	CvMat data_cvmat,res_cvmat;
 	CvSVM svm;
-	CvSVMParams param;
-	char filename[64];
-	char xmlfilename[]="../file_src/svm_image.xml";
 
-	//正集
-	for(i=0;i<pImage_num;i++)
+	//1)设置训练样本集
+    /**
+	需要两组数据，一组是数据的类别res[]，一组是数据的向量信息data[]。
+	**/
+	string dir_tmp=dir_path+"/"+dir_type;
+	//使用c++文件处理系统
+	_finddata_t FileInfo1;
+    string strfind = dir_tmp + "/*";
+    long Handle1 = _findfirst(strfind.c_str(), &FileInfo1);
+    if (Handle1 == -1L)
+    {
+        cerr << "error IdentifyCharSVM::plateSVMTrain can not match the folder path Handle1" << endl;
+        return;
+    }
+	int k=1;
+    do
 	{
-		sprintf(filename,"positive/%03d.png",i);
-		pImg_org=cvLoadImage(filename,CV_LOAD_IMAGE_GRAYSCALE);
-		pImg_spl=cvCreateImage(cvSize(width,height),IPL_DEPTH_8U,1);
-		cvResize(pImg_org,pImg_spl);
-		cvSmooth(pImg_spl,pImg_spl,CV_GAUSSIAN,3,0,0,0);
-		for(ii=0;ii<height;ii++)
-		{
-			for(jj=0;jj<width;jj++)
-			{
-				data[i*image_dim+(ii*width)+jj]=float((int)((uchar)(pImg_spl->imageData[ii*pImg_spl->widthStep+jj]))/255.0);
-			}
-		}
-		res[i]=1;
-	}
+        //判断是否有子目录
+        if (FileInfo1.attrib && _A_SUBDIR)    
+        {
+            //这个语句很重要
+            if( (strcmp(FileInfo1.name,".") != 0 ) &&(strcmp(FileInfo1.name,"..") != 0))   
+            {
+                string newPath = dir_tmp + "/" + FileInfo1.name;
+				string fileExtension = "jpg";  
+				string fileFolder = newPath + "/*." + fileExtension;  
+				// 遍历文件夹  
+				char filename[260];  
+  
+				struct _finddata_t fileInfo2;    // 文件信息结构体  
 	
-	//负集
-	j=i;
-	for(i=j;i<j+nImage_num;i++)
-	{
-		sprintf(filename,"negative/%03d.jpg",i-j);
-		pImg_org=cvLoadImage(filename,CV_LOAD_IMAGE_GRAYSCALE);
-		pImg_spl=cvCreateImage(cvSize(width,height),IPL_DEPTH_8U,1);
-		cvResize(pImg_org,pImg_spl);
-		cvSmooth(pImg_spl,pImg_spl,CV_GAUSSIAN,3,0,0,0);
-		for(ii=0;ii<height;ii++)
-		{
-			for(jj=0;jj<width;jj++)
-			{
-				data[i*image_dim+(ii*width)+jj]=float((int)((uchar)(pImg_spl->imageData[ii*pImg_spl->widthStep+jj]))/255.0);
-			}
-		}
-		res[i]=0;
-	}
+				// 1. 第一次查找  
+				long Handle2 = _findfirst(fileFolder.c_str(), &fileInfo2);   
+				if (Handle2 == -1L)  
+				{  
+					_findclose(Handle2);
+					cerr << "error IdentifyCharSVM::plateSVMTrain can not match the folder path Handle2" << endl;
+					break;  
+				}  
+      
+				// 2. 循环查找  
+				do  
+				{  
+					sprintf(filename, "%s/%s", newPath.c_str(), fileInfo2.name);  
+					if ( fileInfo2.attrib == _A_ARCH)  // 是存档类型文件  
+					{  
+						pImg_org=cvLoadImage(filename,CV_LOAD_IMAGE_GRAYSCALE);
+						pImg_spl=cvCreateImage(cvSize(width,height),IPL_DEPTH_8U,1);
+						cvResize(pImg_org,pImg_spl);
+						cvSmooth(pImg_spl,pImg_spl,CV_GAUSSIAN,3,0,0,0);
+						for(ii=0;ii<height;ii++)
+						{
+							for(jj=0;jj<width;jj++)
+							{
+								dataLabels.at(i*image_dim+(ii*width)+jj)=float((int)((uchar)(pImg_spl->imageData[ii*pImg_spl->widthStep+jj]))/255.0);
+							}
+						}
+						//一个目录即一个分类
+						resLabels.at(i)=k;//正集数值为1,负集数值为0
+					}  
+  
+				}while (!_findnext(Handle2, &fileInfo2));    
+				_findclose(Handle2); 
+            }
+        }
+		k--;//目录代表分类,一个目录即一个分类
+    }while (_findnext(Handle1, &FileInfo1) == 0 && k >= 0 );
+
+    _findclose(Handle1);
 
 	//初始化
-	cvInitMatHeader(&data_mat,allImage_num,image_dim,CV_32FC1,data);
-	cvInitMatHeader(&res_mat,allImage_num,image_dim,CV_32SC1,res);
+	Mat(resLabels).copyTo(res_mat);  
+	Mat(dataLabels).copyTo(data_mat); 
 
-	criteria=cvTermCriteria(CV_TERMCRIT_EPS,1000,FLT_EPSILON);
-	param=CvSVMParams(CvSVM::C_SVC,CvSVM::RBF,10.0,0.09,1.0,10.0,0.5,1.0,NULL,criteria);
+	res_cvmat=res_mat;
+	data_cvmat=data_mat;
 
-	//保存
-	svm.train(&data_mat,&res_mat,NULL,NULL,param);
-	svm.save(xmlfilename);
+	//2）设置SVM参数
+	/**
+	详细说明如下：
+	**/
+	CvSVMParams params;
+	params.svm_type  = CvSVM::C_SVC;//表示SVM类型
+									//CvSVM：：C_SVC  C-SVC
+
+									//CvSVM：：NU_SVC v-SVC
+
+									//CvSVM：：ONE_CLASS 一类SVM
+
+									//CvSVM：：EPS_SVR e-SVR
+
+									//CvSVM：：NU_SVR v-SVR
+    params.kernel_type = CvSVM::RBF;//表示核函数的类型
+										//CvSVM：：LINEAR 线性：u‘v
+
+										//CvSVM：：POLY 多项式：(r*u'v + coef0)^degree
+
+										//CvSVM：：RBF RBF函数：exp(-r|u-v|^2)
+
+										//CvSVM：：SIGMOID sigmoid函数：tanh(r*u'v + coef0)
+
+	params.degree =10.0; //内核函数（POLY）的参数degree
+	
+	params.gamma  =0.09; //内核函数（POLY/ RBF/ SIGMOID）的参数y。
+	
+	params.coef0  =1.0; //内核函数（POLY/ SIGMOID）的参数coef0。
+	
+	params.C  =10.0; //SVM类型（C_SVC/ EPS_SVR/ NU_SVR）的参数C。
+	
+	params.nu  =0.5; //SVM类型（NU_SVC/ ONE_CLASS/ NU_SVR）的参数v。
+	
+	params.p   =1.0; //SVM类型（EPS_SVR）的参数e。
+
+	params.class_weights   =0;//C_SVC中的可选权重，赋给指定的类，乘以C以后变成 class\_weights_i * C。所以这些权重影响不同类别的错误分类惩罚项。权重越大，某一类别的误分类数据的惩罚项就越大。
+
+    params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER, 100, FLT_EPSILON);//SVM的迭代训练过程的中止条件，解决部分受约束二次最优问题。
+
+	//3）训练SVM
+	/**
+	调用CvSVM：：train函数建立SVM模型，第一个参数为训练数据，第二个参数为分类结果，最后一个参数即CvSVMParams
+	**/
+	svm.train(&data_cvmat,&res_cvmat,NULL,NULL,params);
+	//cout<<"dir_type:"<<dir_type<<endl;
+	//需要对string转化为char[]
+	string xmlpath=xml_path+"/plate.xml";
+	const char *xml_tmp=xmlpath.c_str();
+	char *xmlname=(char*)xml_tmp;
+	//sprintf(xmlname, "%s.xml",xmlname); 
+	svm.save(xmlname);
+	//cout<<"xmlname:"<<xmlname<<endl;
+	cout<<"save xml success"<<endl;
 
 	//释放资源
 	cvReleaseImage(&pImg_org);
 	cvReleaseImage(&pImg_spl);
 }
 
-void IdentifyCharSVM::readFaceSVMPredict()
+/****************************************
+plateSVMPredict
+获取概率最高的分类的位置
+
+pImg_src
+源图片
+
+xml_path
+xml文件保存路径
+
+dir_type
+文件夹类型，plate
+
+******************************************/
+int IdentifyCharSVM::plateSVMPredict(IplImage *pImg_src,string xml_path,string dir_type)
 {
-	const int width=28,height=30;//图像尺寸
+	int i,j,ii,jj;
+	const int width=144,height=33;//统一图像大小
 	const int image_dim=width*height;
-
-	int i,j;
-	float a[image_dim];
-	float ret=-1.0;
-	float scale;
-	IplImage *src,*src_color,*src_tmp;
-	int sx,sy,tw,th;
-	int stepx=3,stepy=3;
-	double steps=1.2;
-	int iterate;
-	CvMat mat;
+	IplImage *pImg_spl;
+	vector<float> dataLabels;
+	Mat data_mat;
+	CvMat data_cvmat;
 	CvSVM svm;
-	char filename[]="../img_src/test.jpg";
-	char xmlfilename[]="../file_src/svm_image.xml";
 
-	src=cvLoadImage(filename,CV_LOAD_IMAGE_GRAYSCALE);
-	src_color=cvLoadImage(filename,CV_LOAD_IMAGE_COLOR);
-	//显示图像
-	cvShowImage("original image",src_color);
+	//需要对string转化为char[]
+	string xmlpath=xml_path+"/"+dir_type+".xml";
+	const char *xml_tmp=xmlpath.c_str();
+	char *xmlname=(char*)xml_tmp;
 
 	//读取样本信息
-	svm.load(xmlfilename);
-
-	cvInitMatHeader(&mat,1,image_dim,CV_32FC1,NULL);
-	tw=src->width;
-	th=src->height;
-
-	for(iterate=0;iterate<1;iterate++)
+	svm.load(xmlname);
+	
+	pImg_spl=cvCreateImage(cvSize(width,height),IPL_DEPTH_8U,1);
+	cvResize(pImg_src,pImg_spl);
+	cvSmooth(pImg_spl,pImg_spl,CV_GAUSSIAN,3,0,0,0);
+	for(ii=0;ii<height;ii++)
 	{
-		//画像缩小
-		src_tmp=cvCreateImage(cvSize((int)(tw/steps),(int)(th/steps)),IPL_DEPTH_8U,1);
-		cvResize(src,src_tmp);
-		tw=src_tmp->width;
-		th=src_tmp->height;
-		for(sy=0;sy<=src_tmp->height-height;sy+=stepy)
+		for(jj=0;jj<width;jj++)
 		{
-			for(sx=0;sx<=src_tmp->width-width;sx+=stepx)
-			{
-				for(i=0;i<height;i++)
-				{
-					for(j=0;j<width;j++)
-					{
-						a[i*width+j]=float((int)((uchar)(src_tmp->imageData[(i+sy)*src_tmp->widthStep+(j+sx)]))/255.0);
-					}
-				}
-				cvSetData(&mat,a,sizeof(float)*image_dim);
-
-				//描画结果
-				ret=svm.predict(&mat);
-				if((int)ret==1)
-				{
-					scale=(float)src->width/tw;
-					cvRectangle(src_color,cvPoint((int)(sx*scale),(int)(sy*scale)),cvPoint((int)((sx+width)*scale),(int)((sy+height)*scale)),CV_RGB(255,0,0),2);
-				}
-			}
+			dataLabels.at(i*image_dim+(ii*width)+jj)=float((int)((uchar)(pImg_spl->imageData[ii*pImg_spl->widthStep+jj]))/255.0);
 		}
-		cvReleaseImage(&src_tmp);
 	}
-	//显示图像
-	cvShowImage("result",src_color);
-	cvWaitKey(0);
+	Mat(dataLabels).copyTo(data_mat); 
+	data_cvmat=data_mat;
 
-	//释放资源
-	cvReleaseImage(&src);
-	cvReleaseImage(&src_color);
+	//4）用这个SVM进行分类
+	/**
+	调用函数CvSVM：：predict实现分类
+	**/
+	return (int)svm.predict(&data_cvmat);
 }
+
+/****************************************
+setTrainFile
+设置训练集文件
+
+dir_path
+文件夹路径
+
+dir_type
+文件夹类型，char,chn,digi,digi_char
+
+xml_path
+xml文件保存路径
+
+******************************************/
+void IdentifyCharSVM::setTrainFile(string dir_path,string xml_path,string dir_type)
+{
+	PlateChar plate;
+	Mat mat_trainingData5;
+	Mat mat_trainingData10;
+	Mat mat_trainingData15;
+	Mat mat_trainingData20;
+	Mat data_mat,res_mat;
+	vector<int> resLabels;
+
+	string dir_tmp=dir_path+"/"+dir_type;
+
+	//使用c++文件处理系统
+	_finddata_t FileInfo1;
+    string strfind = dir_tmp + "/*";
+    long Handle1 = _findfirst(strfind.c_str(), &FileInfo1);
+    if (Handle1 == -1L)
+    {
+        cerr << "error IdentifyCharSVM::setTrainFile can not match the folder path Handle1" << endl;
+        return;
+    }
+	int k=0;
+    do{
+        //判断是否有子目录
+        if (FileInfo1.attrib && _A_SUBDIR)    
+        {
+            //这个语句很重要
+            if( (strcmp(FileInfo1.name,".") != 0 ) &&(strcmp(FileInfo1.name,"..") != 0))   
+            {
+                string newPath = dir_tmp + "/" + FileInfo1.name;
+				//cout<<"FileInfo.name:"<<FileInfo1.name<<endl;
+				//cout<<"newPath:"<<newPath<<endl;
+				string fileExtension = "jpg";  
+				string fileFolder = newPath + "/*." + fileExtension;  
+				// 遍历文件夹  
+				char filename[260];  
+  
+				struct _finddata_t fileInfo2;    // 文件信息结构体  
+	
+				// 1. 第一次查找  
+				long Handle2 = _findfirst(fileFolder.c_str(), &fileInfo2);   
+				//cout<<"fileFolder.c_str()："<<fileFolder.c_str()<<endl;
+				if (Handle2 == -1L)  
+				{  
+					_findclose(Handle2);
+					cerr << "error IdentifyCharSVM::setTrainFile can not match the folder path Handle2" << endl;
+					break;  
+				}  
+      
+				// 2. 循环查找  
+				do   
+				{  
+					sprintf(filename, "%s/%s", newPath.c_str(), fileInfo2.name);  
+					//cout<<"newPath.c_str()："<<newPath.c_str()<<endl;
+					//cout<<"fileInfo.attrib："<<fileInfo.attrib<<endl;
+					//cout<<"fileInfo2.name："<<fileInfo2.name<<endl;
+					if ( fileInfo2.attrib == _A_ARCH)  // 是存档类型文件  
+					{  
+						//cout<<"filename: "<<filename<<endl;
+						//string filename_str=string(filename);
+						//Mat mat_img=imread(filename_str,0);//读取单通道
+						//imread/imwrite在本机已失效
+						IplImage *pImg_tmp=cvLoadImage(filename,0);//读取单通道
+						Mat mat_img=pImg_tmp;
+						if(mat_img.empty())
+						{
+							cout<<"error IdentifyCharSVM::setTrainFile mat_img is empty()"<<endl;
+							break;
+						}
+						
+						Mat f5=plate.getFeatureHist(mat_img,5);
+						Mat f10=plate.getFeatureHist(mat_img,10);
+						Mat f15=plate.getFeatureHist(mat_img,15);
+						Mat f20=plate.getFeatureHist(mat_img,20);
+
+						mat_trainingData5.push_back(f5);  
+						mat_trainingData10.push_back(f10);  
+						mat_trainingData15.push_back(f15);  
+						mat_trainingData20.push_back(f20);
+
+						data_mat.push_back(f20);
+						//每一幅字符图片所对应的字符类别索引下标  
+						resLabels.push_back(k);//一个目录即一个分类
+					}  
+  
+				} while (!_findnext(Handle2, &fileInfo2));    
+				_findclose(Handle2); 
+            }
+        }
+		k++;//目录代表分类,一个目录即一个分类
+    }while (_findnext(Handle1, &FileInfo1) == 0);
+
+    _findclose(Handle1);
+
+	mat_trainingData5.convertTo(mat_trainingData5, CV_32FC1);  
+    mat_trainingData10.convertTo(mat_trainingData10, CV_32FC1);  
+    mat_trainingData15.convertTo(mat_trainingData15, CV_32FC1);  
+    mat_trainingData20.convertTo(mat_trainingData20, CV_32FC1); 
+	data_mat.convertTo(data_mat, CV_32FC1); 
+	Mat(resLabels).copyTo(res_mat);  
+	//如何将四个矩阵转化成一个data_mat?
+
+	/********************************SVM CODE**************************************/
+	//1)设置训练样本集
+    /**
+	需要两组数据，一组是数据的类别res[]，一组是数据的向量信息data[]。
+	**/
+	CvSVM svm;
+	CvMat data_cvmat=data_mat;//记录数据向量信息
+	CvMat res_cvmat=res_mat;//记录数据类别
+    
+	//2）设置SVM参数
+	/**
+	详细说明如下：
+	**/
+	CvSVMParams params;
+	params.svm_type  = CvSVM::C_SVC;//表示SVM类型
+									//CvSVM：：C_SVC  C-SVC
+
+									//CvSVM：：NU_SVC v-SVC
+
+									//CvSVM：：ONE_CLASS 一类SVM
+
+									//CvSVM：：EPS_SVR e-SVR
+
+									//CvSVM：：NU_SVR v-SVR
+    params.kernel_type = CvSVM::RBF;//表示核函数的类型
+										//CvSVM：：LINEAR 线性：u‘v
+
+										//CvSVM：：POLY 多项式：(r*u'v + coef0)^degree
+
+										//CvSVM：：RBF RBF函数：exp(-r|u-v|^2)
+
+										//CvSVM：：SIGMOID sigmoid函数：tanh(r*u'v + coef0)
+
+	params.degree =10.0; //内核函数（POLY）的参数degree
+	
+	params.gamma  =0.09; //内核函数（POLY/ RBF/ SIGMOID）的参数y。
+	
+	params.coef0  =1.0; //内核函数（POLY/ SIGMOID）的参数coef0。
+	
+	params.C  =10.0; //SVM类型（C_SVC/ EPS_SVR/ NU_SVR）的参数C。
+	
+	params.nu  =0.5; //SVM类型（NU_SVC/ ONE_CLASS/ NU_SVR）的参数v。
+	
+	params.p   =1.0; //SVM类型（EPS_SVR）的参数e。
+
+	params.class_weights   =0;//C_SVC中的可选权重，赋给指定的类，乘以C以后变成 class\_weights_i * C。所以这些权重影响不同类别的错误分类惩罚项。权重越大，某一类别的误分类数据的惩罚项就越大。
+
+    params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER, 100, FLT_EPSILON);//SVM的迭代训练过程的中止条件，解决部分受约束二次最优问题。
+
+	//3）训练SVM
+	/**
+	调用CvSVM：：train函数建立SVM模型，第一个参数为训练数据，第二个参数为分类结果，最后一个参数即CvSVMParams
+	**/
+	svm.train(&data_cvmat,&res_cvmat,NULL,NULL,params);
+	//cout<<"dir_type:"<<dir_type<<endl;
+	//需要对string转化为char[]
+	string xmlpath=xml_path+"/"+dir_type+".xml";
+	const char *xml_tmp=xmlpath.c_str();
+	char *xmlname=(char*)xml_tmp;
+	//sprintf(xmlname, "%s.xml",xmlname); 
+	svm.save(xmlname);
+	//cout<<"xmlname:"<<xmlname<<endl;
+	cout<<"save xml success"<<endl;
+}
+
+/****************************************
+getPredictPosition
+获取概率最高的分类的位置
+
+pImg_src
+源图片
+
+xml_path
+xml文件保存路径
+
+dir_type
+文件夹类型，char,chn,digi,digi_char
+
+******************************************/
+int IdentifyCharSVM::getPredictPosition(IplImage *pImg_src,string xml_path,string dir_type)
+{
+	PlateChar plate;
+	CvSVM svm;
+	CvMat sample_cvmat;
+	Mat sample_mat,img_mat;
+	Mat mat_trainingData5;
+	Mat mat_trainingData10;
+	Mat mat_trainingData15;
+	Mat mat_trainingData20;
+	//需要对string转化为char[]
+	string xmlpath=xml_path+"/"+dir_type+".xml";
+	const char *xml_tmp=xmlpath.c_str();
+	char *xmlname=(char*)xml_tmp;
+
+	//读取样本信息
+	svm.load(xmlname);
+
+	img_mat=pImg_src;
+	if(img_mat.empty())
+	{
+		cout<<"error IdentifyCharSVM::getPredictPosition img_mat is empty()"<<endl;
+		return 0;
+	}
+	
+	Mat f5=plate.getFeatureHist(img_mat,5);
+	Mat f10=plate.getFeatureHist(img_mat,10);
+	Mat f15=plate.getFeatureHist(img_mat,15);
+	Mat f20=plate.getFeatureHist(img_mat,20);
+
+	mat_trainingData5.push_back(f5);  
+	mat_trainingData10.push_back(f10);  
+	mat_trainingData15.push_back(f15);  
+	mat_trainingData20.push_back(f20);
+	//如何整合4个矩阵？
+	sample_mat.push_back(f20);
+	sample_mat.convertTo(sample_mat, CV_32FC1); 
+
+	sample_cvmat=sample_mat;
+
+	//4）用这个SVM进行分类
+	/**
+	调用函数CvSVM：：predict实现分类
+	**/
+	return (int)svm.predict(&sample_cvmat);
+}
+
+
 
