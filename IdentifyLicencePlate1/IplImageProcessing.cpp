@@ -181,8 +181,10 @@ myThreshold
 src
 单通道源灰度图片
 
+type
+取反类型，0表示正常，1表示取反
 ******************************************/
-IplImage* IplImageProcessing::myThreshold(IplImage* src)
+IplImage* IplImageProcessing::myThreshold(IplImage* src,int type)
 {
 	if(src==NULL)
 	{
@@ -216,13 +218,27 @@ IplImage* IplImageProcessing::myThreshold(IplImage* src)
 	{
 		for(int j=0;j<src->width;j++)
 		{
-			if(CV_IMAGE_ELEM(src,unsigned char,i,j)>threshold)
+			if(type)
 			{
-				CV_IMAGE_ELEM(src,unsigned char,i,j)=255;
+				if(CV_IMAGE_ELEM(src,unsigned char,i,j)>threshold)
+				{
+					CV_IMAGE_ELEM(src,unsigned char,i,j)=0;
+				}
+				else
+				{
+					CV_IMAGE_ELEM(src,unsigned char,i,j)=255;
+				}
 			}
 			else
 			{
-				CV_IMAGE_ELEM(src,unsigned char,i,j)=0;
+				if(CV_IMAGE_ELEM(src,unsigned char,i,j)>threshold)
+				{
+					CV_IMAGE_ELEM(src,unsigned char,i,j)=255;
+				}
+				else
+				{
+					CV_IMAGE_ELEM(src,unsigned char,i,j)=0;
+				}
 			}
 		}
 	}

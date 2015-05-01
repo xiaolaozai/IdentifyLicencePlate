@@ -51,7 +51,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	//全局二值化
 	IplImage* pImg_threshold = cvCreateImage(cvGetSize(pImg_src), IPL_DEPTH_8U,1);
-	pImg_threshold=pImgProcess->myThreshold(pImg_stretch);
+	pImg_threshold=pImgProcess->myThreshold(pImg_stretch,0);
 	//cvShowImage("cvThreshold",pImg_threshold);
 
 	////自适应二值化
@@ -114,7 +114,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		//全局二值化
 		pImg_selectThreshold = cvCreateImage(cvGetSize(pImg_selectColor), IPL_DEPTH_8U,1);
-		pImg_selectThreshold=pImgProcess->myThreshold(pImg_selectGray);
+		pImg_selectThreshold=pImgProcess->myThreshold(pImg_selectGray,0);
 		//cvThreshold(pImg_selectGray,pImg_selectThreshold,0,255,CV_THRESH_OTSU);
 		cvShowImage("pImg_selectThreshold",pImg_selectThreshold);
 		int x1=0,x2=0;
@@ -172,7 +172,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	IplImage* pImg_LicenceGray=NULL;
 	IplImage* pImg_LicenceContour=NULL;
 	IplImage* pImg_LicenceThreshold=NULL;
-	IplImage* pImg_LicenceThreshold2=NULL;
+	IplImage* pImg_LicenceGray2=NULL;
 	IplImage* pImg_LicenceChar[7];//存放车牌字符
 	if(pImg_selectLicence!=NULL)
 	{
@@ -184,19 +184,19 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		//灰度化
 		pImg_LicenceGray=cvCreateImage(cvGetSize(pImg_LicenceResize), IPL_DEPTH_8U,1);
+		pImg_LicenceGray2 = cvCreateImage(cvGetSize(pImg_LicenceResize), IPL_DEPTH_8U,1);
 		pImg_LicenceGray=pImgProcess->myRGB2Gray(pImg_LicenceResize,pImg_LicenceGray);
 		cvShowImage("pImg_LicenceGray",pImg_LicenceGray);
+		//复制pImg_LicenceGray
+		pImg_LicenceGray2=cvCloneImage(pImg_LicenceGray);
+		cvShowImage("pImg_LicenceGray2",pImg_LicenceGray2);
 
 		//自适应主成分二值化（主成分变成黑色，其他的为白色）
 		pImg_LicenceThreshold = cvCreateImage(cvGetSize(pImg_LicenceResize), IPL_DEPTH_8U,1);
-		pImg_LicenceThreshold2 = cvCreateImage(cvGetSize(pImg_LicenceResize), IPL_DEPTH_8U,1);
 		//pImg_LicenceThreshold=pImgProcess->myThreshold(pImg_LicenceGray);
 		//cvThreshold(pImg_LicenceGray,pImg_LicenceThreshold,140,255,CV_THRESH_OTSU);
 		pImg_LicenceThreshold=pImgProcess->myBaseAdaptiveThreshold(pImg_LicenceGray);
 		cvShowImage("pImg_LicenceThreshold",pImg_LicenceThreshold);
-		//复制pImg_LicenceThreshold
-		pImg_LicenceThreshold2=cvCloneImage(pImg_LicenceThreshold);
-		cvShowImage("pImg_LicenceThreshold2",pImg_LicenceThreshold2);
 
 		//形态学定位车牌字符
 		list<CvRect> list_char_rects;//存储车牌字符位置
@@ -221,9 +221,18 @@ int _tmain(int argc, _TCHAR* argv[])
 		if((7==list_char_rects.size()&&rect_char.x>min_x&&rect_char.x<max_x)||6==list_char_rects.size())//需要对第一个重新切割的情况
 		{
 			pImg_LicenceChar[k]=cvCreateImage(cvSize(20,25),IPL_DEPTH_8U,1);
-			cvSetImageROI(pImg_LicenceThreshold2,cvRect(0,4,20,25));
-			cvCopyImage(pImg_LicenceThreshold2,pImg_LicenceChar[k]);
-			cvResetImageROI(pImg_LicenceThreshold2);
+			cvSetImageROI(pImg_LicenceGray2,cvRect(0,4,20,25));
+			cvCopyImage(pImg_LicenceGray2,pImg_LicenceChar[k]);
+			cvResetImageROI(pImg_LicenceGray2);
+			if(colorType==1||colorType==2)//底色为浅色时（白或黄）取反操作
+			{
+				pImg_LicenceChar[k]=pImgProcess->myThreshold(pImg_LicenceChar[k],1);
+			}
+			else
+			{
+				pImg_LicenceChar[k]=pImgProcess->myThreshold(pImg_LicenceChar[k],0);
+			}
+			
 			cvShowImage(name_LicenceChar[k],pImg_LicenceChar[k]);
 			if(7==list_char_rects.size())
 			{
@@ -243,22 +252,30 @@ int _tmain(int argc, _TCHAR* argv[])
 			if(rect_temp.width<10)//遇到字符是1
 			{
 				int enX=5;
-				if(rect_temp.x-enX+rect_temp.width+2*enX<pImg_LicenceThreshold2->width)
+				if(rect_temp.x-enX+rect_temp.width+2*enX<pImg_LicenceGray2->width)
 				{
 					pImg_LicenceChar[k]=cvCreateImage(cvSize(rect_temp.width+2*enX,rect_temp.height),IPL_DEPTH_8U,1);
-					cvSetImageROI(pImg_LicenceThreshold2,cvRect(rect_temp.x-enX,rect_temp.y,rect_temp.width+2*enX,rect_temp.height));
+					cvSetImageROI(pImg_LicenceGray2,cvRect(rect_temp.x-enX,rect_temp.y,rect_temp.width+2*enX,rect_temp.height));
 				}else
 				{
 					pImg_LicenceChar[k]=cvCreateImage(cvSize(rect_temp.width+1.5*enX,rect_temp.height),IPL_DEPTH_8U,1);
-					cvSetImageROI(pImg_LicenceThreshold2,cvRect(rect_temp.x-enX,rect_temp.y,rect_temp.width+1.5*enX,rect_temp.height));
+					cvSetImageROI(pImg_LicenceGray2,cvRect(rect_temp.x-enX,rect_temp.y,rect_temp.width+1.5*enX,rect_temp.height));
 				}
 			}else
 			{
 				pImg_LicenceChar[k]=cvCreateImage(cvSize(rect_temp.width,rect_temp.height),IPL_DEPTH_8U,1);
-				cvSetImageROI(pImg_LicenceThreshold2,rect_temp);
+				cvSetImageROI(pImg_LicenceGray2,rect_temp);
 			}
-			cvCopyImage(pImg_LicenceThreshold2,pImg_LicenceChar[k]);
-			cvResetImageROI(pImg_LicenceThreshold2);
+			cvCopyImage(pImg_LicenceGray2,pImg_LicenceChar[k]);
+			cvResetImageROI(pImg_LicenceGray2);
+			if(colorType==1||colorType==2)//底色为浅色时（白或黄）取反操作
+			{
+				pImg_LicenceChar[k]=pImgProcess->myThreshold(pImg_LicenceChar[k],1);
+			}
+			else
+			{
+				pImg_LicenceChar[k]=pImgProcess->myThreshold(pImg_LicenceChar[k],0);
+			}
 			cvShowImage(name_LicenceChar[k],pImg_LicenceChar[k]);
 			k++;
 		}
@@ -266,7 +283,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 
 	//字符识别
-	pSVM->test();
+	//pSVM->test();
 
 
 	/**********************
@@ -302,14 +319,15 @@ int _tmain(int argc, _TCHAR* argv[])
 	{
 		cvReleaseImage(&pImg_LicenceGray);
 	}
+	if(pImg_LicenceGray2!=NULL)
+	{
+		cvReleaseImage(&pImg_LicenceGray2);
+	}
 	if(pImg_LicenceThreshold!=NULL)
 	{
 		cvReleaseImage(&pImg_LicenceThreshold);
 	}
-	if(pImg_LicenceThreshold2!=NULL)
-	{
-		cvReleaseImage(&pImg_LicenceThreshold2);
-	}
+
 	if(pImg_LicenceContour!=NULL)
 	{
 		cvReleaseImage(&pImg_LicenceContour);

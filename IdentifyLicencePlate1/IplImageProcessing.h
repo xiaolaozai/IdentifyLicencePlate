@@ -7,7 +7,7 @@ public:
 	IplImage* myGrayStretch(IplImage* src,int threshold1,int threshold2);
 	IplImage* myDilate(IplImage* src,int nVer,int nVerTimes,int nHor,int nHorTimes);
 	IplImage* myErode(IplImage* src,int nVer,int nVerTimes,int nHor,int nHorTimes);
-	IplImage* myThreshold(IplImage* src);
+	IplImage* myThreshold(IplImage* src,int type);
 	IplImage* myBaseAdaptiveThreshold(IplImage* src);
 	bool isMyThresholdCount(IplImage* src,int threshold,double scale,int type);
 	IplImage* myCutImageLine(IplImage* src,int verMinCount,int horMinCount,int type);
