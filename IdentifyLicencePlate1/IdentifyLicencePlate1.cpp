@@ -90,6 +90,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	IplImage* pImg_selectGray=NULL;
 	IplImage* pImg_selectThreshold=NULL;
 	IplImage* pImg_selectLicence=NULL;
+	IplImage* pImg_PlateResize=NULL;
 	int colorType=-1;//记录蓝底，黄底，黑底，白底
 	bool colorFlag=false;//找到底色与否
 	if(list_rects.empty())
@@ -102,6 +103,11 @@ int _tmain(int argc, _TCHAR* argv[])
 		cout<<"list_rects is not empty()"<<endl;
 	}
 
+	//设置训练车牌分类器xml文件
+	pSVM->plateSVMTrain(pSrc->getImageTrainPath(),pSrc->getXMLTrainPath(),"plate");
+	//pSVM->setTrainFile(pSrc->getImageTrainPath(),pSrc->getXMLTrainPath(),"num");
+
+	int kk=1;
 	while(!list_rects.empty()&&!colorFlag)//非空并且没找到底色
 	{
 		rect2=list_rects.front();
@@ -116,29 +122,41 @@ int _tmain(int argc, _TCHAR* argv[])
 		pImg_selectGray=pImgProcess->myRGB2Gray(pImg_selectColor,pImg_selectGray);
 		cvShowImage("pImg_selectGray",pImg_selectGray);
 
-		//全局二值化
-		pImg_selectThreshold = cvCreateImage(cvGetSize(pImg_selectColor), IPL_DEPTH_8U,1);
-		pImg_selectThreshold=pImgProcess->myThreshold(pImg_selectGray,0);
-		//cvThreshold(pImg_selectGray,pImg_selectThreshold,0,255,CV_THRESH_OTSU);
-		cvShowImage("pImg_selectThreshold",pImg_selectThreshold);
-		int x1=0,x2=0;
-		int y1=0,y2=0;
-		//cout<<"pImg_selectThreshold->height="<<pImg_selectThreshold->height<<" pImg_selectThreshold->width="<<pImg_selectThreshold->width<<endl;
-		//cout<<"rect2.height="<<rect2.height<<" rect2.width="<<rect2.width<<endl;
-		bool flagLicence=pImgProcess->isMyLicence(pImg_selectThreshold,240,x1,x2,pImg_selectThreshold->width/3,y1,y2,pImg_selectThreshold->height/2);
-		if(flagLicence)//精确查到车牌时
-		{
-			int nHorK=2,nVerK=2;//行列缩小数
-			int nWidth=x2-x1-2*nHorK,nHeight=y2-y1-2*nVerK;//行列宽高
-			pImg_selectLicence=cvCreateImage(cvSize(nWidth,nHeight),IPL_DEPTH_8U,3);
-			cvSetImageROI(pImg_src,cvRect(rect2.x+x1+nHorK,rect2.y+y1+nVerK,nWidth,nHeight));
-			cvCopy(pImg_src,pImg_selectLicence);
-			cvResetImageROI(pImg_src);
-			cvShowImage("pImg_selectLicence",pImg_selectLicence);
-			//寻找底色
-			pImgProcess->myExtractHSV(pImg_selectLicence,colorType);//colorType!=-1，说明找到底色
-			break;
-		}
+
+		pImg_PlateResize=cvCreateImage(cvSize(144,33),IPL_DEPTH_8U,1);
+		cvResize(pImg_selectGray,pImg_PlateResize,CV_INTER_LINEAR); //线性插值
+		//char platename[64];
+		//sprintf(platename,"../img_model/plate/%d.jpg",kk++);
+		//cvSaveImage(platename,pImg_PlateResize);
+		//cvShowImage(platename,pImg_PlateResize);
+
+		////获取看是否为车牌
+		//int p=pSVM->getPredictPosition(pImg_PlateResize,pSrc->getXMLTrainPath(),"plate");
+
+
+		////全局二值化
+		//pImg_selectThreshold = cvCreateImage(cvGetSize(pImg_selectColor), IPL_DEPTH_8U,1);
+		//pImg_selectThreshold=pImgProcess->myThreshold(pImg_selectGray,0);
+		////cvThreshold(pImg_selectGray,pImg_selectThreshold,0,255,CV_THRESH_OTSU);
+		//cvShowImage("pImg_selectThreshold",pImg_selectThreshold);
+		//int x1=0,x2=0;
+		//int y1=0,y2=0;
+		////cout<<"pImg_selectThreshold->height="<<pImg_selectThreshold->height<<" pImg_selectThreshold->width="<<pImg_selectThreshold->width<<endl;
+		////cout<<"rect2.height="<<rect2.height<<" rect2.width="<<rect2.width<<endl;
+		//bool flagLicence=pImgProcess->isMyLicence(pImg_selectThreshold,240,x1,x2,pImg_selectThreshold->width/3,y1,y2,pImg_selectThreshold->height/2);
+		//if(flagLicence)//精确查到车牌时
+		//{
+		//	int nHorK=2,nVerK=2;//行列缩小数
+		//	int nWidth=x2-x1-2*nHorK,nHeight=y2-y1-2*nVerK;//行列宽高
+		//	pImg_selectLicence=cvCreateImage(cvSize(nWidth,nHeight),IPL_DEPTH_8U,3);
+		//	cvSetImageROI(pImg_src,cvRect(rect2.x+x1+nHorK,rect2.y+y1+nVerK,nWidth,nHeight));
+		//	cvCopy(pImg_src,pImg_selectLicence);
+		//	cvResetImageROI(pImg_src);
+		//	cvShowImage("pImg_selectLicence",pImg_selectLicence);
+		//	//寻找底色
+		//	pImgProcess->myExtractHSV(pImg_selectLicence,colorType);//colorType!=-1，说明找到底色
+		//	break;
+		//}
 		list_rects.pop_front();
 	}
 
@@ -298,8 +316,8 @@ int _tmain(int argc, _TCHAR* argv[])
 		}
 
 		//zifushibie
-		////pAnn->setTrainFile(pSrc->getImageTrainPath(),"char",pSrc->getXMLTrainPath());
-		////设置训练分类器xml文件
+		//pAnn->setTrainFile(pSrc->getImageTrainPath(),"char",pSrc->getXMLTrainPath());
+		//设置训练分类器xml文件
 		//pSVM->setTrainFile(pSrc->getImageTrainPath(),pSrc->getXMLTrainPath(),"chn");
 		//pSVM->setTrainFile(pSrc->getImageTrainPath(),pSrc->getXMLTrainPath(),"letter");
 		//pSVM->setTrainFile(pSrc->getImageTrainPath(),pSrc->getXMLTrainPath(),"num");
@@ -312,28 +330,28 @@ int _tmain(int argc, _TCHAR* argv[])
 		//第一个字符，使用汉字分类器
 		int p=pSVM->getPredictPosition(pImg_Plate[0],pSrc->getXMLTrainPath(),"chn");
 		//cout<<"p="<<p<<endl;
-		cout<<"第一个字符为："<<chn[p-2]<<endl;
+		cout<<"第一个字符为："<<chn[p]<<endl;
 
 		//第二个字符，使用字母分类器
 		p=pSVM->getPredictPosition(pImg_Plate[1],pSrc->getXMLTrainPath(),"letter");
 		//cout<<"p="<<p<<endl;
-		cout<<"第二个字符为："<<letter[p-2]<<endl;
+		cout<<"第二个字符为："<<letter[p]<<endl;
 
 		//第三个字符，使用数字+字母分类器
 		p=pSVM->getPredictPosition(pImg_Plate[2],pSrc->getXMLTrainPath(),"num_letter");
-		cout<<"第三个字符为："<<num_letter[p-2]<<endl;
+		cout<<"第三个字符为："<<num_letter[p]<<endl;
 
 		//第四个字符，使用数字+字母分类器
 		p=pSVM->getPredictPosition(pImg_Plate[3],pSrc->getXMLTrainPath(),"num_letter");
-		cout<<"第四个字符为："<<num_letter[p-2]<<endl;
+		cout<<"第四个字符为："<<num_letter[p]<<endl;
 
 		//第五个字符，使用数字分类器
 		p=pSVM->getPredictPosition(pImg_Plate[4],pSrc->getXMLTrainPath(),"num");
-		cout<<"第五个字符为："<<num[p-2]<<endl;
+		cout<<"第五个字符为："<<num[p]<<endl;
 
 		//第六个字符，使用数字分类器
 		p=pSVM->getPredictPosition(pImg_Plate[5],pSrc->getXMLTrainPath(),"num");
-		cout<<"第六个字符为："<<num[p-2]<<endl;
+		cout<<"第六个字符为："<<num[p]<<endl;
 
 		//第七个字符，使用数字分类器
 		p=pSVM->getPredictPosition(pImg_Plate[6],pSrc->getXMLTrainPath(),"num");
@@ -370,6 +388,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	{
 		cvReleaseImage(&pImg_selectLicence);
 	}
+	if(pImg_PlateResize!=NULL)
+	{
+		cvReleaseImage(&pImg_PlateResize);
+	}
 	if(pImg_LicenceResize!=NULL)
 	{
 		cvReleaseImage(&pImg_LicenceResize);
@@ -397,6 +419,10 @@ int _tmain(int argc, _TCHAR* argv[])
 		if(pImg_LicenceChar[i]!=NULL)
 		{
 			cvReleaseImage(&pImg_LicenceChar[i]);
+		}
+		if(pImg_Plate[i]!=NULL)
+		{
+			cvReleaseImage(&pImg_Plate[i]);
 		}
 	}
 	cvReleaseImage(&pImg_contour);
