@@ -255,17 +255,15 @@ void IdentifyCharSVM::plateSVMTrain(string dir_path,string xml_path,string dir_t
 					if ( fileInfo2.attrib == _A_ARCH)  // 是存档类型文件  
 					{  
 						IplImage *pImg_tmp=cvLoadImage(filename,0);//读取单通道
-						Mat mat_img=pImg_tmp;
-						Mat mat_tmp;
-						if(mat_img.empty())
+						if(pImg_tmp==NULL)
 						{
-							cout<<"error IdentifyCharSVM::plateSVMTrain mat_img is empty()"<<endl;
+							cout<<"error IdentifyCharSVM::plateSVMTrain cvLoadImage fail"<<endl;
 							break;
 						}
-						
-						//equalizeHist(mat_img,mat_tmp);
-						Mat f20=plate.getFeatureHist(mat_img,20);
-						data_mat.push_back(f20);
+						Mat mat_img=pImg_tmp;
+						Mat mat_tmp;
+						Mat f15=plate.getFeatureHist(mat_img,15);
+						data_mat.push_back(f15);
 						//一个目录即一个分类 
 						resLabels.push_back(k);//正集数值为1,负集数值为0
 					}  
@@ -295,20 +293,17 @@ void IdentifyCharSVM::plateSVMTrain(string dir_path,string xml_path,string dir_t
 	/**
 	详细说明如下：
 	**/
-	//CvSVMParams params;
- //   params.svm_type = CvSVM::C_SVC;  
- //   params.kernel_type = CvSVM::LINEAR; //CvSVM::LINEAR;  
- ////   params.degree = 0;  
- ////   params.gamma = 1;  
- ////   params.coef0 = 0;  
- ////   params.C = 1;  
- ////   params.nu = 0;  
- ////   params.p = 0;  
-	////params.class_weights =0;
- //   params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER, 1000, FLT_EPSILON); 
-
-	CvTermCriteria criteria=cvTermCriteria(CV_TERMCRIT_EPS,1000,FLT_EPSILON);//停止迭代的标准,传入
-	CvSVMParams params=CvSVMParams(CvSVM::C_SVC,CvSVM::RBF,10.0,8.0,1.0,10.0,0.5,0.1,NULL,criteria);
+	CvSVMParams params;
+    params.svm_type = CvSVM::C_SVC;  
+    params.kernel_type = CvSVM::LINEAR; //CvSVM::LINEAR;  
+    params.degree = 0;  
+    params.gamma = 1;  
+    params.coef0 = 0;  
+    params.C = 1;  
+    params.nu = 0;  
+    params.p = 0;  
+	params.class_weights =0;
+    params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER, 1000, 0.001); 
 
 
 	//3）训练SVM
@@ -347,11 +342,13 @@ int IdentifyCharSVM::plateSVMPredict(IplImage *pImg_src,string xml_path,string d
 	PlateChar plate;
 	CvSVM svm;
 	CvMat sample_cvmat;
-	Mat sample_mat,img_mat;
-	Mat mat_trainingData5;
-	Mat mat_trainingData10;
-	Mat mat_trainingData15;
-	Mat mat_trainingData20;
+	Mat sample_mat;
+
+	if(pImg_src==NULL||xml_path==""||dir_type=="")
+	{
+		cout<<"error IdentifyCharSVM::plateSVMPredict bad arguments"<<endl;
+		return 0;
+	}
 	//需要对string转化为char[]
 	string xmlpath=xml_path+"/"+dir_type+".xml";
 	const char *xml_tmp=xmlpath.c_str();
@@ -360,18 +357,9 @@ int IdentifyCharSVM::plateSVMPredict(IplImage *pImg_src,string xml_path,string d
 	//读取样本信息
 	svm.load(xmlname);
 
-	img_mat=pImg_src;
-	if(img_mat.empty())
-	{
-		cout<<"error IdentifyCharSVM::plateSVMPredict img_mat is empty()"<<endl;
-		return 0;
-	}
-
-	Mat mat_tmp;
-	//equalizeHist(img_mat,mat_tmp);
-	Mat f20=plate.getFeatureHist(img_mat,20);
-	sample_mat.push_back(f20);
-	/*sample_mat.push_back(mat_tmp);*/
+	Mat mat_img=pImg_src;
+	Mat f15=plate.getFeatureHist(mat_img,15);
+	sample_mat.push_back(f15);
 	sample_mat.convertTo(sample_mat, CV_32FC1); 
 	sample_cvmat=sample_mat;
 
@@ -452,13 +440,12 @@ void IdentifyCharSVM::setTrainFile(string dir_path,string xml_path,string dir_ty
 							//Mat mat_img=imread(filename_str,0);//读取单通道
 							//imread/imwrite在本机已失效
 							IplImage *pImg_tmp=cvLoadImage(filename,0);//读取单通道
-							Mat mat_img=pImg_tmp;
-							if(mat_img.empty())
+							if(pImg_tmp==NULL)
 							{
-								cout<<"error IdentifyCharSVM::setTrainFile mat_img is empty()"<<endl;
+								cout<<"error IdentifyCharSVM::setTrainFile cvLoadImage fail"<<endl;
 								break;
 							}
-						
+							Mat mat_img=pImg_tmp;
 							Mat f5=plate.getFeatureHist(mat_img,5);
 							Mat f10=plate.getFeatureHist(mat_img,10);
 							Mat f15=plate.getFeatureHist(mat_img,15);
@@ -586,6 +573,12 @@ int IdentifyCharSVM::getPredictPosition(IplImage *pImg_src,string xml_path,strin
 	Mat mat_trainingData10;
 	Mat mat_trainingData15;
 	Mat mat_trainingData20;
+
+	if(pImg_src==NULL||xml_path==""||xml_path=="")
+	{
+		cout<<"error IdentifyCharSVM::getPredictPosition bad arguments "<<endl;
+		return 0;
+	}
 	//需要对string转化为char[]
 	string xmlpath=xml_path+"/"+dir_type+".xml";
 	const char *xml_tmp=xmlpath.c_str();
@@ -593,14 +586,8 @@ int IdentifyCharSVM::getPredictPosition(IplImage *pImg_src,string xml_path,strin
 
 	//读取样本信息
 	svm.load(xmlname);
-
 	img_mat=pImg_src;
-	if(img_mat.empty())
-	{
-		cout<<"error IdentifyCharSVM::getPredictPosition img_mat is empty()"<<endl;
-		return 0;
-	}
-	
+
 	Mat f5=plate.getFeatureHist(img_mat,5);
 	Mat f10=plate.getFeatureHist(img_mat,10);
 	Mat f15=plate.getFeatureHist(img_mat,15);

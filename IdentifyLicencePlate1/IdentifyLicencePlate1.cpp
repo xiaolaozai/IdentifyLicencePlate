@@ -58,11 +58,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	pImg_threshold=pImgProcess->myThreshold(pImg_stretch,0);
 	//cvShowImage("cvThreshold",pImg_threshold);
 
-	////自适应二值化
-	//IplImage* pImg_threshold = cvCreateImage(cvGetSize(pImg_src), IPL_DEPTH_8U,1);
-	//cvThreshold(pImg_stretch,pImg_threshold,0,255,CV_THRESH_OTSU);
-	//cvShowImage("cvThreshold",pImg_threshold);
-
 	/**********************
 	第一阶段：预处理
 	结束
@@ -77,7 +72,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	list<CvRect> list_rects;//存储车牌位置
 	IplImage* pImg_contour=cvCreateImage(cvGetSize(pImg_src),IPL_DEPTH_8U,3);//3通道灰度图，存储轮廓信息
 	double minX=pImg_src->width/4,minY=pImg_src->height/2.5;//车牌位置出现的最小坐标位置(minX,minY)
-	double minWidth=0,minHeight=0;//最小最大长宽比阀值
+	double minWidth=0,minHeight=0;//最小长宽
 	double minK=2.0,maxK=5.5;//最小最大长宽比阀值
 	int minArea=300;//目标位置最小面积
 	list_rects=pImgProcess->myRoughing(pImg_threshold,pImg_contour,list_rects,minX,minY,minWidth,minHeight,minK,maxK,minArea);
@@ -91,8 +86,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	IplImage* pImg_selectThreshold=NULL;
 	IplImage* pImg_selectLicence=NULL;
 	IplImage* pImg_PlateResize=NULL;
+	IplImage* pImg_PlateAdaptiveThreshold=NULL;
+	IplImage* pImg_PlateColor=NULL;
+	IplImage* pImg_hist=NULL;
 	int colorType=-1;//记录蓝底，黄底，黑底，白底
-	bool colorFlag=false;//找到底色与否
 	if(list_rects.empty())
 	{
 		cout<<"list_rects is empty()"<<endl;
@@ -104,17 +101,22 @@ int _tmain(int argc, _TCHAR* argv[])
 	}
 
 	//设置训练车牌分类器xml文件
-	pSVM->plateSVMTrain(pSrc->getImageTrainPath(),pSrc->getXMLTrainPath(),"plate");
+	//pSVM->plateSVMTrain(pSrc->getImageTrainPath(),pSrc->getXMLTrainPath(),"plate");
+	//设置训练车牌字符分类器xml文件
+	//pSVM->setTrainFile(pSrc->getImageTrainPath(),pSrc->getXMLTrainPath(),"chn");
+	//pSVM->setTrainFile(pSrc->getImageTrainPath(),pSrc->getXMLTrainPath(),"letter");
 	//pSVM->setTrainFile(pSrc->getImageTrainPath(),pSrc->getXMLTrainPath(),"num");
+	//pSVM->setTrainFile(pSrc->getImageTrainPath(),pSrc->getXMLTrainPath(),"num_letter");
 
-	int kk=1;
-	while(!list_rects.empty()&&!colorFlag)//非空并且没找到底色
+	//int kk=1;
+	while(!list_rects.empty()&&colorType==-1)//非空并且没找到底色
 	{
 		rect2=list_rects.front();
 		pImg_selectColor=cvCreateImage(cvSize(rect2.width,rect2.height),IPL_DEPTH_8U,3);
-		cvSetImageROI(pImg_src,rect2);
-		cvCopy(pImg_src,pImg_selectColor);
-		cvResetImageROI(pImg_src);
+		pImgProcess->myCutImage(pImg_src,pImg_selectColor,rect2);
+		//cvSetImageROI(pImg_src,rect2);
+		//cvCopy(pImg_src,pImg_selectColor);
+		//cvResetImageROI(pImg_src);
 		cvShowImage("pImg_selectColor",pImg_selectColor);
 		//寻找精确轮廓
 		//灰度化
@@ -122,7 +124,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		pImg_selectGray=pImgProcess->myRGB2Gray(pImg_selectColor,pImg_selectGray);
 		cvShowImage("pImg_selectGray",pImg_selectGray);
 
-
+		//设置与训练集大小一样的图片
 		pImg_PlateResize=cvCreateImage(cvSize(144,33),IPL_DEPTH_8U,1);
 		cvResize(pImg_selectGray,pImg_PlateResize,CV_INTER_LINEAR); //线性插值
 		//char platename[64];
@@ -130,36 +132,78 @@ int _tmain(int argc, _TCHAR* argv[])
 		//cvSaveImage(platename,pImg_PlateResize);
 		//cvShowImage(platename,pImg_PlateResize);
 
-		////获取看是否为车牌
-		//int p=pSVM->getPredictPosition(pImg_PlateResize,pSrc->getXMLTrainPath(),"plate");
+		//获取看是否为车牌
+		int p=pSVM->plateSVMPredict(pImg_PlateResize,pSrc->getXMLTrainPath(),"plate");
+		//精确查询车牌位置
+		if(p==1)//是车牌的粗选位置
+		{
+			//cvShowImage("pImg_PlateResize",pImg_PlateResize);
 
+			//pImg_selectLicence = cvCreateImage(cvGetSize(pImg_selectColor), IPL_DEPTH_8U,3);
+			//pImg_selectLicence=cvCloneImage(pImg_selectColor);
 
-		////全局二值化
-		//pImg_selectThreshold = cvCreateImage(cvGetSize(pImg_selectColor), IPL_DEPTH_8U,1);
-		//pImg_selectThreshold=pImgProcess->myThreshold(pImg_selectGray,0);
-		////cvThreshold(pImg_selectGray,pImg_selectThreshold,0,255,CV_THRESH_OTSU);
-		//cvShowImage("pImg_selectThreshold",pImg_selectThreshold);
-		//int x1=0,x2=0;
-		//int y1=0,y2=0;
-		////cout<<"pImg_selectThreshold->height="<<pImg_selectThreshold->height<<" pImg_selectThreshold->width="<<pImg_selectThreshold->width<<endl;
-		////cout<<"rect2.height="<<rect2.height<<" rect2.width="<<rect2.width<<endl;
-		//bool flagLicence=pImgProcess->isMyLicence(pImg_selectThreshold,240,x1,x2,pImg_selectThreshold->width/3,y1,y2,pImg_selectThreshold->height/2);
-		//if(flagLicence)//精确查到车牌时
-		//{
-		//	int nHorK=2,nVerK=2;//行列缩小数
-		//	int nWidth=x2-x1-2*nHorK,nHeight=y2-y1-2*nVerK;//行列宽高
-		//	pImg_selectLicence=cvCreateImage(cvSize(nWidth,nHeight),IPL_DEPTH_8U,3);
-		//	cvSetImageROI(pImg_src,cvRect(rect2.x+x1+nHorK,rect2.y+y1+nVerK,nWidth,nHeight));
-		//	cvCopy(pImg_src,pImg_selectLicence);
-		//	cvResetImageROI(pImg_src);
-		//	cvShowImage("pImg_selectLicence",pImg_selectLicence);
-		//	//寻找底色
-		//	pImgProcess->myExtractHSV(pImg_selectLicence,colorType);//colorType!=-1，说明找到底色
-		//	break;
-		//}
+			//自适应二值化(局部二值化)消除光照影响
+			pImg_PlateAdaptiveThreshold = cvCreateImage(cvGetSize(pImg_selectGray), IPL_DEPTH_8U,1);
+			cvThreshold(pImg_selectGray,pImg_PlateAdaptiveThreshold,0,255,CV_THRESH_OTSU);
+			cvShowImage("pImg_PlateAdaptiveThreshold",pImg_PlateAdaptiveThreshold);
+
+			pImg_hist=cvCreateImage(cvSize(100,100),8,3); 
+			pImg_hist=pPlate->showHistogram(pImg_PlateAdaptiveThreshold,pImg_hist,0);
+			pImg_hist=pPlate->showHistogram(pImg_PlateAdaptiveThreshold,pImg_hist,1);
+			cvShowImage("pImg_hist",pImg_hist);
+
+			cout<<"pImg_PlateAdaptiveThreshold->width="<<pImg_PlateAdaptiveThreshold->width<<endl;
+			cout<<"pImg_PlateAdaptiveThreshold->height="<<pImg_PlateAdaptiveThreshold->height<<endl;
+			cout<<"pImg_selectColor->width="<<pImg_selectColor->width<<endl;
+			cout<<"pImg_selectColor->height="<<pImg_selectColor->height<<endl;
+
+			int x0=0,x1=pImg_PlateAdaptiveThreshold->height;
+			int y0=0,y1=pImg_PlateAdaptiveThreshold->width;
+			float xT=0.30;
+			float yT=0.20;
+			pPlate->getPlatePosition(pImg_PlateAdaptiveThreshold,x0,x1,xT,y0,y1,yT);
+			int cutW=x1-x0;
+			int cutH=y1-y0+2;
+			cout<<"x0="<<x0<<" x1="<<x1<<endl;
+			cout<<"y0="<<y0<<" y1="<<y1<<endl;
+			pImg_selectLicence=cvCreateImage(cvSize(cutW,cutH),IPL_DEPTH_8U,3);
+			pImgProcess->myCutImage(pImg_selectColor,pImg_selectLicence,cvRect(x0,y0-1,cutW,cutH));
+			cvShowImage("pImg_selectLicence",pImg_selectLicence);
+
+			//	cvSetImageROI(pImg_selectColor,palte_rect);
+			//	cvCopy(pImg_selectColor,pImg_selectLicence);
+			//	cvResetImageROI(pImg_selectColor);
+
+			//pPlate->showHistogram(pImg_PlateAdaptiveThreshold,0);
+
+			//pPlate->showHistogram(pImg_PlateAdaptiveThreshold,1);
+
+			////形态学定位
+			//list<CvRect> list_plates;//存储车牌位置
+			//pImg_contour=cvCreateImage(cvGetSize(pImg_selectGray),IPL_DEPTH_8U,3);//3通道灰度图，存储轮廓信息
+			//double minX=0,minY=0;//开始选择的位置(minX,minY)
+			//double minWidth=pImg_selectGray->width*0.6,minHeight=pImg_selectGray->height*0.6;//最小长宽
+			//double minK=2.0,maxK=5.5;//最小最大长宽比阀值
+			//int minArea=pImg_selectGray->height*pImg_selectGray->width/2;//目标位置最小面积
+			//list_plates=pImgProcess->myRoughing(pImg_PlateAdaptiveThreshold,pImg_contour,list_plates,minX,minY,minWidth,minHeight,minK,maxK,minArea);
+
+			//if(!list_plates.empty())
+			//{
+			//	cout<<"list_plates is not empty"<<endl;
+			//	CvRect palte_rect=list_plates.back();
+			//	pImg_selectLicence=cvCreateImage(cvSize(palte_rect.width,palte_rect.height),IPL_DEPTH_8U,3);
+			//	cvSetImageROI(pImg_selectColor,palte_rect);
+			//	cvCopy(pImg_selectColor,pImg_selectLicence);
+			//	cvResetImageROI(pImg_selectColor);
+			//}
+			//cvShowImage("pImg_selectLicence",pImg_selectLicence);
+			//寻找底色
+			pImgProcess->myExtractHSV(pImg_selectLicence,colorType);//colorType!=-1，说明找到底色
+
+			break;
+		}
 		list_rects.pop_front();
 	}
-
 	cout<<"车牌颜色类型：";
 	switch(colorType)
 	{
@@ -195,8 +239,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	IplImage* pImg_LicenceContour=NULL;
 	IplImage* pImg_LicenceThreshold=NULL;
 	IplImage* pImg_LicenceGray2=NULL;
+	IplImage* pImg_LicenceCut=NULL;
 	IplImage* pImg_LicenceChar[7];//存放车牌字符
 	IplImage* pImg_Plate[7];//存放归一化后车牌字符
+
 	if(pImg_selectLicence!=NULL)
 	{
 		//归一化车牌图像大小
@@ -205,27 +251,28 @@ int _tmain(int argc, _TCHAR* argv[])
 		cvResize(pImg_selectLicence,pImg_LicenceResize,CV_INTER_LINEAR); //线性插值
 		cvShowImage("pImg_LicenceResize",pImg_LicenceResize);
 
-		//灰度化
 		pImg_LicenceGray=cvCreateImage(cvGetSize(pImg_LicenceResize), IPL_DEPTH_8U,1);
 		pImg_LicenceGray2 = cvCreateImage(cvGetSize(pImg_LicenceResize), IPL_DEPTH_8U,1);
 		pImg_LicenceGray=pImgProcess->myRGB2Gray(pImg_LicenceResize,pImg_LicenceGray);
-		cvShowImage("pImg_LicenceGray",pImg_LicenceGray);
-		//复制pImg_LicenceGray
 		pImg_LicenceGray2=cvCloneImage(pImg_LicenceGray);
-		cvShowImage("pImg_LicenceGray2",pImg_LicenceGray2);
+		cvShowImage("pImg_LicenceGray",pImg_LicenceGray);
 
-		//自适应主成分二值化（主成分变成黑色，其他的为白色）
 		pImg_LicenceThreshold = cvCreateImage(cvGetSize(pImg_LicenceResize), IPL_DEPTH_8U,1);
-		//pImg_LicenceThreshold=pImgProcess->myThreshold(pImg_LicenceGray);
-		//cvThreshold(pImg_LicenceGray,pImg_LicenceThreshold,140,255,CV_THRESH_OTSU);
-		pImg_LicenceThreshold=pImgProcess->myBaseAdaptiveThreshold(pImg_LicenceGray);
+		cvThreshold(pImg_LicenceGray,pImg_LicenceThreshold,0,255,CV_THRESH_OTSU);
 		cvShowImage("pImg_LicenceThreshold",pImg_LicenceThreshold);
+
+		if(colorType==1||colorType==2)//底色为浅色时（白或黄）取反操作
+		{
+			cvThreshold(pImg_LicenceThreshold,pImg_LicenceThreshold,0,255,CV_THRESH_BINARY_INV);
+		}
+
+		cvShowImage("pImg_LicenceThreshold2",pImg_LicenceThreshold);
 
 		//形态学定位车牌字符
 		list<CvRect> list_char_rects;//存储车牌字符位置
-		pImg_LicenceContour=cvCreateImage(cvGetSize(pImg_LicenceResize),IPL_DEPTH_8U,3);//3通道灰度图，存储轮廓信息
+		pImg_LicenceContour=cvCreateImage(cvGetSize(pImg_LicenceResize),IPL_DEPTH_8U,1);//1通道灰度图，存储轮廓信息
 		double minX=0,minY=0;//车牌位置出现的最小坐标位置(minX,minY)
-		double minWidth=0,minHeight=nRheight*0.70;//最小宽和最小高
+		double minWidth=0,minHeight=pImg_LicenceResize->height*0.60;//最小宽和最小高
 		double minK=0.0,maxK=33/20.0*1.35;//最小最大长宽比阀值
 		int minArea=20;//目标位置最小面积
 		list_char_rects=pImgProcess->myRoughing(pImg_LicenceThreshold,pImg_LicenceContour,list_char_rects,minX,minY,minWidth,minHeight,minK,maxK,minArea);
@@ -237,71 +284,68 @@ int _tmain(int argc, _TCHAR* argv[])
 		CvRect rect_char=list_char_rects.front();
 		cout<<"x="<<rect_char.x<<" y="<<rect_char.y<<endl;
 		cout<<"width="<<rect_char.width<<" height="<<rect_char.height<<endl;
+		cout<<endl;
 		int min_x=6,min_y=3;
 		int max_x=20,max_y=10;
 		int k=0;
 		const char* name_LicenceChar[]={"pImg_LicenceChar1","pImg_LicenceChar2","pImg_LicenceChar3","pImg_LicenceChar4","pImg_LicenceChar5","pImg_LicenceChar6","pImg_LicenceChar7"};
 		if((7==list_char_rects.size()&&rect_char.x>min_x&&rect_char.x<max_x)||6==list_char_rects.size())//需要对第一个重新切割的情况
 		{
-			pImg_LicenceChar[k]=cvCreateImage(cvSize(20,25),IPL_DEPTH_8U,1);
-			cvSetImageROI(pImg_LicenceGray2,cvRect(0,4,20,25));
-			cvCopy(pImg_LicenceGray2,pImg_LicenceChar[k]);
-			cvResetImageROI(pImg_LicenceGray2);
-			if(colorType==1||colorType==2)//底色为浅色时（白或黄）取反操作
-			{
-				pImg_LicenceChar[k]=pImgProcess->myThreshold(pImg_LicenceChar[k],1);
-			}
-			else
-			{
-				pImg_LicenceChar[k]=pImgProcess->myThreshold(pImg_LicenceChar[k],0);
-			}
-			
-			cvShowImage(name_LicenceChar[k],pImg_LicenceChar[k]);
+			int x=2,y=4;
+			int ww=20,hh=26;
 			if(7==list_char_rects.size())
 			{
 				list_char_rects.pop_front();
 			}
+			CvRect rect_tmp=list_char_rects.front();
+			y=rect_tmp.y;
+			hh=rect_tmp.height;//取第二个字符的高度
+
+
+			pImg_LicenceChar[k]=cvCreateImage(cvSize(ww,hh),IPL_DEPTH_8U,1);
+			pImgProcess->myCutImage(pImg_LicenceGray2,pImg_LicenceChar[k],cvRect(x,y,ww,hh));
+
+			cvThreshold(pImg_LicenceChar[k],pImg_LicenceChar[k],0,255,CV_THRESH_OTSU);
+
+			if(colorType==1||colorType==2)//底色为浅色时（白或黄）取反操作
+			{
+				cvThreshold(pImg_LicenceChar[k],pImg_LicenceChar[k],0,255,CV_THRESH_BINARY_INV);
+			}
+			
+			//cvShowImage(name_LicenceChar[k],pImg_LicenceChar[k]);
 			k++;
 		}
+		cout<<"pImg_selectLicence->height="<<pImg_selectLicence->height<<endl;
+		cout<<"pImg_selectLicence->height*0.80="<<pImg_selectLicence->height*0.80<<endl;
 		for(list<CvRect>::iterator iter=list_char_rects.begin();iter!=list_char_rects.end()&&k<7;iter++)
 		{
 			CvRect rect_temp=*iter;
-			//if(k!=0)
+			//if(k==0)
 			//{
-			//	cout<<"x="<<rect_temp.x<<" y="<<rect_temp.y<<endl;
-			//	cout<<"width="<<rect_temp.width<<" height="<<rect_temp.height<<endl;
+			//	cout<<"rect_temp.height="<<rect_temp.height<<endl;
 			//}
+			cout<<"x="<<rect_temp.x<<" y="<<rect_temp.y<<endl;
+			cout<<"width="<<rect_temp.width<<" height="<<rect_temp.height<<endl;
 
-			if(rect_temp.width<10)//遇到字符是1
-			{
-				int enX=5;
-				if(rect_temp.x-enX+rect_temp.width+2*enX<pImg_LicenceGray2->width)
-				{
-					pImg_LicenceChar[k]=cvCreateImage(cvSize(rect_temp.width+2*enX,rect_temp.height),IPL_DEPTH_8U,1);
-					cvSetImageROI(pImg_LicenceGray2,cvRect(rect_temp.x-enX,rect_temp.y,rect_temp.width+2*enX,rect_temp.height));
-				}else
-				{
-					pImg_LicenceChar[k]=cvCreateImage(cvSize(rect_temp.width+1.5*enX,rect_temp.height),IPL_DEPTH_8U,1);
-					cvSetImageROI(pImg_LicenceGray2,cvRect(rect_temp.x-enX,rect_temp.y,rect_temp.width+1.5*enX,rect_temp.height));
-				}
-			}else
-			{
-				pImg_LicenceChar[k]=cvCreateImage(cvSize(rect_temp.width,rect_temp.height),IPL_DEPTH_8U,1);
-				cvSetImageROI(pImg_LicenceGray2,rect_temp);
-			}
-			cvCopy(pImg_LicenceGray2,pImg_LicenceChar[k]);
-			cvResetImageROI(pImg_LicenceGray2);
+			pImg_LicenceChar[k]=cvCreateImage(cvSize(rect_temp.width,rect_temp.height),IPL_DEPTH_8U,1);
+			pImgProcess->myCutImage(pImg_LicenceGray2,pImg_LicenceChar[k],rect_temp);
+
+			cvThreshold(pImg_LicenceChar[k],pImg_LicenceChar[k],0,255,CV_THRESH_OTSU);
+
 			if(colorType==1||colorType==2)//底色为浅色时（白或黄）取反操作
 			{
-				pImg_LicenceChar[k]=pImgProcess->myThreshold(pImg_LicenceChar[k],1);
+				cvThreshold(pImg_LicenceChar[k],pImg_LicenceChar[k],0,255,CV_THRESH_BINARY_INV);
 			}
-			else
-			{
-				pImg_LicenceChar[k]=pImgProcess->myThreshold(pImg_LicenceChar[k],0);
-			}
-			cvShowImage(name_LicenceChar[k],pImg_LicenceChar[k]);
+
+			//cvShowImage(name_LicenceChar[k],pImg_LicenceChar[k]);
 			k++;
 		}
+		if(k!=7)
+		{
+			cout<<"切割字符出错"<<endl;
+			goto Release;
+		}
+
 		//归一化字符图片大小
 		for(int i=0;i<7&&i<k;i++)
 		{
@@ -315,13 +359,6 @@ int _tmain(int argc, _TCHAR* argv[])
 			//imwrite(filename,mat_resize);//出错
 		}
 
-		//zifushibie
-		//pAnn->setTrainFile(pSrc->getImageTrainPath(),"char",pSrc->getXMLTrainPath());
-		//设置训练分类器xml文件
-		//pSVM->setTrainFile(pSrc->getImageTrainPath(),pSrc->getXMLTrainPath(),"chn");
-		//pSVM->setTrainFile(pSrc->getImageTrainPath(),pSrc->getXMLTrainPath(),"letter");
-		//pSVM->setTrainFile(pSrc->getImageTrainPath(),pSrc->getXMLTrainPath(),"num");
-		//pSVM->setTrainFile(pSrc->getImageTrainPath(),pSrc->getXMLTrainPath(),"num_letter");
 		string chn[]={"川","晋","京","军","苏","粤"};
 		string letter[]={"A","B","H","N","V","Z"};
 		string num[]={"0","1","2","3","5","6","7","8","9"};
@@ -355,12 +392,9 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		//第七个字符，使用数字分类器
 		p=pSVM->getPredictPosition(pImg_Plate[6],pSrc->getXMLTrainPath(),"num");
-		cout<<"第七个字符为："<<num[p-2]<<endl;
+		cout<<"第七个字符为："<<num[p]<<endl;
+
 	}
-
-
-	//字符识别
-	//pAnn->testRead();
 
 
 	/**********************
@@ -391,6 +425,14 @@ int _tmain(int argc, _TCHAR* argv[])
 	if(pImg_PlateResize!=NULL)
 	{
 		cvReleaseImage(&pImg_PlateResize);
+	}
+	if(pImg_PlateAdaptiveThreshold!=NULL)
+	{
+		cvReleaseImage(&pImg_PlateAdaptiveThreshold);
+	}
+	if(pImg_LicenceCut!=NULL)
+	{
+		cvReleaseImage(&pImg_LicenceCut);
 	}
 	if(pImg_LicenceResize!=NULL)
 	{
@@ -424,6 +466,11 @@ int _tmain(int argc, _TCHAR* argv[])
 		{
 			cvReleaseImage(&pImg_Plate[i]);
 		}
+	}
+
+	if(pImg_hist!=NULL)
+	{
+		cvReleaseImage(&pImg_hist);
 	}
 	cvReleaseImage(&pImg_contour);
 	cvReleaseImage(&pImg_threshold);

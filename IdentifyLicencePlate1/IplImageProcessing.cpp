@@ -480,7 +480,6 @@ IplImage* IplImageProcessing::myCutImageLine(IplImage* src,int verMinCount,int h
 	return src;
 }
 
-
 /****************************************
 myCutImage
 切割图片
@@ -506,7 +505,6 @@ IplImage* IplImageProcessing::myCutImage(IplImage* src,IplImage* dst,CvRect rect
 	cvCopy(src,dst);
 	cvResetImageROI(src);
 	//cvShowImage("myCutImage",dst);
-
 	return dst;
 }
 
@@ -899,7 +897,7 @@ void IplImageProcessing::myExtractHSV(IplImage* src,int &colorType)
 	//亮度(v)小于25%为黑色区域，亮度(v)大于75%并且饱和度(s)小于20%为白色区域
 
 	//蓝色//h:190-245 s:0.35-1 v:0.3-1
-	cvInRangeS(pImg_h,cvScalar(110.0,0.0,0.0),cvScalar(130.0,0.0,0.0),pImg_tmH1_blue);//蓝色
+	cvInRangeS(pImg_h,cvScalar(100.0,0.0,0.0),cvScalar(140.0,0.0,0.0),pImg_tmH1_blue);//蓝色
 	cvInRangeS(pImg_s,cvScalar(64.0,0.0,0.0),cvScalar(191.0,0.0,0.0),pImg_tmS1_blue);
 	cvAnd(pImg_tmH1_blue,pImg_tmS1_blue,pImg_tmH1_blue,0);
 
@@ -907,7 +905,7 @@ void IplImageProcessing::myExtractHSV(IplImage* src,int &colorType)
 	Scalar v_blue=sum(mat_result_blue);
 
 	//cout<<"pImg_tmH1_blue total piexls:"<<pImg_tmH1_blue->imageSize<<endl;
-	//cout<<"blue:"<<v_blue[0]/255<<endl;
+	cout<<"blue:"<<v_blue[0]/255<<endl;
 	//cout<<"blue scale:"<<v_blue[0]/255/pImg_tmH1_blue->imageSize<<endl;
 
 	//float blue_scale=v_blue[0]/255/pImg_tmH1_blue->imageSize;
@@ -915,13 +913,13 @@ void IplImageProcessing::myExtractHSV(IplImage* src,int &colorType)
 	//cvCopy(pImg_tmV1_blue,dst_blue);
 
 	//黄色
-	cvInRangeS(pImg_h,cvScalar(20.0,0.0,0.0),cvScalar(40.0,0.0,0.0),pImg_tmH1_yellow);//黄色
+	cvInRangeS(pImg_h,cvScalar(10.0,0.0,0.0),cvScalar(50.0,0.0,0.0),pImg_tmH1_yellow);//黄色
 	cvInRangeS(pImg_s,cvScalar(64.0,0.0,0.0),cvScalar(191.0,0.0,0.0),pImg_tmS1_yellow);
 	cvAnd(pImg_tmH1_yellow,pImg_tmS1_yellow,pImg_tmH1_yellow,0);
 
 	Mat mat_result_yellow=pImg_tmH1_yellow;
 	Scalar v_yellow=sum(mat_result_yellow);
-	//cout<<"yellow:"<<v_yellow[0]/255<<endl;
+	cout<<"yellow:"<<v_yellow[0]/255<<endl;
 	//cout<<"yellow scale:"<<v_yellow[0]/255/pImg_tmH1_blue->imageSize<<endl;
 
 	//float yellow_scale=v_yellow[0]/255/pImg_tmH1_yellow->imageSize;
@@ -929,13 +927,13 @@ void IplImageProcessing::myExtractHSV(IplImage* src,int &colorType)
 	//cvCopy(pImg_tmV1_yellow,dst_yellow);
 
 	//白色
-	cvInRangeS(pImg_v,cvScalar(200.0,0.0,0.0),cvScalar(255.0,0.0,0.0),pImg_tmV1_white);//白色
+	cvInRangeS(pImg_v,cvScalar(220.0,0.0,0.0),cvScalar(255.0,0.0,0.0),pImg_tmV1_white);//白色
 	cvInRangeS(pImg_s,cvScalar(0.0,0.0,0.0),cvScalar(64.0,0.0,0.0),pImg_tmS1_white);
 	cvAnd(pImg_tmV1_white,pImg_tmS1_white,pImg_tmV1_white,0);
 
 	Mat mat_result_white=pImg_tmV1_white;
 	Scalar v_white=sum(mat_result_white);
-	//cout<<"white:"<<v_white[0]/255<<endl;
+	cout<<"white:"<<v_white[0]/255<<endl;
 	//cout<<"white scale:"<<v_white[0]/255/pImg_tmH1_blue->imageSize<<endl;
 
 	//float white_scale=v_white[0]/255/pImg_tmV1_white->imageSize;
@@ -943,13 +941,13 @@ void IplImageProcessing::myExtractHSV(IplImage* src,int &colorType)
 	//cvCopy(pImg_tmV1_white,dst_white);
 
 	//黑色
-	cvInRangeS(pImg_v,cvScalar(0.0,0.0,0.0),cvScalar(64.0,0.0,0.0),pImg_tmV1_black);//黑色
+	cvInRangeS(pImg_v,cvScalar(0.0,0.0,0.0),cvScalar(50.0,0.0,0.0),pImg_tmV1_black);//黑色
 	cvInRangeS(pImg_s,cvScalar(0.0,0.0,0.0),cvScalar(255.0,0.0,0.0),pImg_tmS1_black);
 	cvAnd(pImg_tmV1_black,pImg_tmS1_black,pImg_tmV1_black,0);
 
 	Mat mat_result_black=pImg_tmV1_black;
 	Scalar v_black=sum(mat_result_black);
-	//cout<<"black:"<<v_black[0]/255<<endl;
+	cout<<"black:"<<v_black[0]/255<<endl;
 	//cout<<"black scale:"<<v_black[0]/255/pImg_tmH1_blue->imageSize<<endl;
 
 	//float black_scale=v_black[0]/255/pImg_tmV1_black->imageSize;
