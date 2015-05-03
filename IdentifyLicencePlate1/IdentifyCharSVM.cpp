@@ -456,7 +456,7 @@ void IdentifyCharSVM::setTrainFile(string dir_path,string xml_path,string dir_ty
 							mat_trainingData15.push_back(f15);  
 							mat_trainingData20.push_back(f20);
 
-							data_mat.push_back(f20);
+							data_mat.push_back(f15);
 							//每一幅字符图片所对应的字符类别索引下标  
 							resLabels.push_back(k);//一个目录即一个分类
 						}  
@@ -531,7 +531,7 @@ void IdentifyCharSVM::setTrainFile(string dir_path,string xml_path,string dir_ty
 
 	params.class_weights =0;//C_SVC中的可选权重，赋给指定的类，乘以C以后变成 class\_weights_i * C。所以这些权重影响不同类别的错误分类惩罚项。权重越大，某一类别的误分类数据的惩罚项就越大。
 
-    params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER, 100, FLT_EPSILON);//SVM的迭代训练过程的中止条件，解决部分受约束二次最优问题。
+    params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER, 1000, FLT_EPSILON);//SVM的迭代训练过程的中止条件，解决部分受约束二次最优问题。
 
 	//3）训练SVM
 	/**
@@ -598,7 +598,7 @@ int IdentifyCharSVM::getPredictPosition(IplImage *pImg_src,string xml_path,strin
 	mat_trainingData15.push_back(f15);  
 	mat_trainingData20.push_back(f20);
 	//如何整合4个矩阵？
-	sample_mat.push_back(f20);
+	sample_mat.push_back(f15);
 	sample_mat.convertTo(sample_mat, CV_32FC1); //缩放并转换到另外一种数据类型 src.convertTo(dst, type, scale, shift) 
 
 	sample_cvmat=sample_mat;

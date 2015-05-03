@@ -112,11 +112,24 @@ void PlateChar::getPlatePosition(IplImage* pImg_src,int &x0,int &x1, float xT,in
 				cout<<"mat_hist_x y0 value="<<value<<endl;
 				cout<<"mat_hist_x y0="<<y0<<endl;
 			}
+
+			if(value>0.95&&j<mat_hist_x.cols*0.3)//特别大的
+			{
+				y0=j+1;//上起方向
+				cout<<"mat_hist_x y0 value="<<value<<endl;
+				cout<<"mat_hist_x y0="<<y0<<endl;
+			}
+
 			y1=j;//从上起向下起方向的方向一定是连续的
 		}
 		else
 		{
-			if(flag&&j>mat_hist_x.cols/2) break;
+			if(flag&&j>mat_hist_x.cols*0.7) 
+			{
+				cout<<"mat_hist_x y1 value="<<value<<endl;
+				cout<<"mat_hist_x y1="<<y1<<endl;
+				break;
+			}
 		}
 	}
 }
