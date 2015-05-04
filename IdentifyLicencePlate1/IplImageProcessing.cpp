@@ -395,7 +395,7 @@ horMinCount
 水平上符合条件最短线段
 
 type
-类型，垂直为0，,水平不为0
+类型，垂直为0，,水平非0
 
 ******************************************/
 IplImage* IplImageProcessing::myCutImageLine(IplImage* src,int verMinCount,int horMinCount,int type)
