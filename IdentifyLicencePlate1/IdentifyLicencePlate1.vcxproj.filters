@@ -33,6 +33,15 @@
     <ClInclude Include="IplImageProcessing.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="IdentifyCharSVM.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="PlateChar.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="IdentifyCharANN.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -48,6 +57,15 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="IplImageProcessing.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="IdentifyCharSVM.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="PlateChar.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="IdentifyCharANN.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

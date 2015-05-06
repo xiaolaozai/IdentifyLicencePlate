@@ -1,6 +1,7 @@
-﻿  getSource.cpp
-  IdentifyLicencePlate1.cpp
-e:\myprojects\vsc++project\identifylicenceplate1\identifylicenceplate1\identifylicenceplate1.cpp(250): warning C4244: “参数”: 从“double”转换到“int”，可能丢失数据
-e:\myprojects\vsc++project\identifylicenceplate1\identifylicenceplate1\identifylicenceplate1.cpp(251): warning C4244: “参数”: 从“double”转换到“int”，可能丢失数据
-  正在生成代码...
+﻿  IdentifyLicencePlate1.cpp
+e:\myprojects\vsc++project\identifylicenceplate1\identifylicenceplate1\identifylicenceplate1.cpp(314): warning C4305: “初始化”: 从“double”到“float”截断
+e:\myprojects\vsc++project\identifylicenceplate1\identifylicenceplate1\identifylicenceplate1.cpp(316): warning C4305: “初始化”: 从“double”到“float”截断
+e:\myprojects\vsc++project\identifylicenceplate1\identifylicenceplate1\identifylicenceplate1.cpp(549): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+          d:\program files\microsoft visual studio 10.0\vc\include\stdio.h(371) : 参见“sprintf”的声明
+e:\myprojects\vsc++project\identifylicenceplate1\identifylicenceplate1\identifylicenceplate1.cpp(17): warning C4101: “j”: 未引用的局部变量
   IdentifyLicencePlate1.vcxproj -> E:\MyProjects\VSC++Project\IdentifyLicencePlate1\Debug\IdentifyLicencePlate1.exe

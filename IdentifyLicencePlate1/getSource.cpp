@@ -2,10 +2,11 @@
 #include "getSource.h"
 
 //图片文件等资源路径
-char* getSource::IMG_PATH="../img_src/licencePlate41.jpg";
+char* getSource::IMG_PATH="../img_src/licencePlate8.jpg";
 string getSource::FILE_PATH="../file_src/mat.txt";
 string getSource::IMG_TRAIN_PATH="../img_model";
 string getSource::XML_TRAIN_PATH="../xml";
+string getSource::YML_TRAIN_PATH="../yml";
 
 getSource::getSource(void)
 {
@@ -55,5 +56,15 @@ string getSource::getXMLTrainPath()
 void getSource::setXMLTrainPath(string file_path)
 {
 	XML_TRAIN_PATH=file_path;
+}
+
+string getSource::getYMLTrainPath()
+{
+	return YML_TRAIN_PATH;
+}
+
+void getSource::setYMLTrainPath(string file_path)
+{
+	YML_TRAIN_PATH=file_path;
 }
 

@@ -77,15 +77,21 @@
   <ItemGroup>
     <ClInclude Include="FileOperation.h" />
     <ClInclude Include="getSource.h" />
+    <ClInclude Include="IdentifyCharANN.h" />
+    <ClInclude Include="IdentifyCharSVM.h" />
     <ClInclude Include="IplImageProcessing.h" />
+    <ClInclude Include="PlateChar.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FileOperation.cpp" />
     <ClCompile Include="getSource.cpp" />
+    <ClCompile Include="IdentifyCharANN.cpp" />
+    <ClCompile Include="IdentifyCharSVM.cpp" />
     <ClCompile Include="IdentifyLicencePlate1.cpp" />
     <ClCompile Include="IplImageProcessing.cpp" />
+    <ClCompile Include="PlateChar.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>

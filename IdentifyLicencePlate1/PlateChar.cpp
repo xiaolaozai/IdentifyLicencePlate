@@ -78,8 +78,8 @@ yT
 void PlateChar::getLicencePosition(IplImage* pImg_src,int &x0,int &x1, float xV, float xT,int &y0,int &y1,float yV,float yT)
 {
 	Mat mat_src=pImg_src;
-	Mat mat_hist_x=getHistogram(mat_src,1,0);
-	Mat mat_hist_y=getHistogram(mat_src,0,0);
+	Mat mat_hist_x=getHistogram(mat_src,1,1);
+	Mat mat_hist_y=getHistogram(mat_src,0,1);
 	float value_min=0.10;
 	float value_pre,value_cur,value_nex;
 	float xs=0.20,ys=0.30;
@@ -97,14 +97,13 @@ void PlateChar::getLicencePosition(IplImage* pImg_src,int &x0,int &x1, float xV,
 			if(abs(value_pre-value_cur)>=xT)
 			{
 				x0=j;
-				if(value_cur<=value_min||value_cur>=xV)
-				{
-					continue;
-				};
+				cout<<"abs(value_pre-value_cur):"<<abs(value_pre-value_cur)<<endl;
+				//if(value_cur<=value_min||value_cur>=xV)
+				//{
+				//	continue;
+				//};
 				break;
 			}
-			cout<<"abs(value_pre-value_cur):"<<abs(value_pre-value_cur)<<endl;
-			cout<<"value_cur:"<<value_cur<<endl;
 		}
 		if(value_pre<=value_min)
 		{
@@ -113,6 +112,7 @@ void PlateChar::getLicencePosition(IplImage* pImg_src,int &x0,int &x1, float xV,
 			{
 				minCount++;
 				x0=j;
+				cout<<"value_cur:"<<value_cur<<endl;
 			}
 		}
 		else
@@ -134,14 +134,14 @@ void PlateChar::getLicencePosition(IplImage* pImg_src,int &x0,int &x1, float xV,
 		{
 			if(abs(value_cur-value_nex)>=xT)
 			{
-				x1=j;
-				if(value_cur<=value_min||value_cur>=xV)
-				{
-					continue;
-				};
+				x1=j+1;
+				cout<<"abs(value_cur-value_nex):"<<abs(value_cur-value_nex)<<endl;
+				//if(value_cur<=value_min||value_cur>=xV)
+				//{
+				//	continue;
+				//};
 				break;
 			}
-			cout<<"abs(value_cur-value_nex):"<<abs(value_cur-value_nex)<<endl;
 		/*	cout<<"value_cur:"<<value_cur<<endl;*/
 		}
 		if(value_nex<=value_min)
@@ -151,6 +151,7 @@ void PlateChar::getLicencePosition(IplImage* pImg_src,int &x0,int &x1, float xV,
 			{
 				minCount++;
 				x1=j;
+				cout<<"value_cur:"<<value_cur<<endl;
 			}
 		}
 		else
@@ -174,10 +175,10 @@ void PlateChar::getLicencePosition(IplImage* pImg_src,int &x0,int &x1, float xV,
 			if(abs(value_pre-value_cur)>=yT)
 			{
 				y0=j;
+				cout<<"abs(value_pre-value_cur):"<<abs(value_pre-value_cur)<<endl;
 				break;
 			}
 		/*	cout<<"abs(value_pre-value_cur):"<<abs(value_pre-value_cur)<<endl;*/
-			cout<<"value_cur:"<<value_cur<<endl;
 		}
 		if(value_pre<=value_min)
 		{
@@ -186,6 +187,7 @@ void PlateChar::getLicencePosition(IplImage* pImg_src,int &x0,int &x1, float xV,
 			{
 				minCount++;
 				y0=j;
+				cout<<"value_cur:"<<value_cur<<endl;
 			}
 		}
 		else
@@ -208,9 +210,9 @@ void PlateChar::getLicencePosition(IplImage* pImg_src,int &x0,int &x1, float xV,
 			if(abs(value_cur-value_nex)>=yT)
 			{
 				y1=j;
+				cout<<"abs(value_cur-value_nex):"<<abs(value_cur-value_nex)<<endl;
 				break;
 			}
-			cout<<"value_cur:"<<value_cur<<endl;
 	/*		cout<<"abs(value_cur-value_nex):"<<abs(value_cur-value_nex)<<endl;*/
 		}
 		if(value_nex<=value_min)
@@ -219,7 +221,8 @@ void PlateChar::getLicencePosition(IplImage* pImg_src,int &x0,int &x1, float xV,
 			if(count>=minCount)//一次性
 			{
 				minCount++;
-				x0=j;
+				y1=j;
+				cout<<"value_cur:"<<value_cur<<endl;
 			}
 		}
 		else
@@ -388,7 +391,7 @@ type
 IplImage* PlateChar::showHistogram(IplImage* pImg_src,IplImage* pImg_hist,int type)
 {
 	Mat mat_src=pImg_src;
-	Mat mat_hist=getHistogram(mat_src,type,0);
+	Mat mat_hist=getHistogram(mat_src,type,1);
 	int size=(type)?mat_src.rows:mat_src.cols;
 	//展示数据
 	for(int j=0;j<size;j++)
