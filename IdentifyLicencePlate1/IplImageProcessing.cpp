@@ -1483,3 +1483,134 @@ void IplImageProcessing::myExtractHSV(IplImage* src,int &colorType)
 	colorType=-1;
 }
 
+
+/****************************************
+myPlateColorHSV
+提取车牌主要颜色并进行处理
+
+src
+源图片
+
+colorType
+底色类型 -1,0,1,2,3分别代表出错，蓝底，黄底，白底，黑底
+
+******************************************/
+void IplImageProcessing::myPlateColorHSV(IplImage* src,int &colorType)
+{
+	if(src==NULL)
+	{
+		cout<<"myExtractHSV image source is NULL"<<endl;
+		colorType=-1;
+		return;
+	}
+	IplImage* pImg_hsv=cvCreateImage(cvGetSize(src),IPL_DEPTH_8U,3);
+	IplImage* pImg_gray=cvCreateImage(cvGetSize(src),IPL_DEPTH_8U,1);
+	cvCvtColor(src,pImg_hsv,CV_BGR2HSV);//转换HSV
+
+	int color[4];//蓝，黄，白，黑
+	memset(color,0,sizeof(color));
+
+	for(int i=0;i<pImg_hsv->height;i++)
+	{
+		for(int j=0;j<pImg_hsv->width;j++)
+		{
+			int H=CV_IMAGE_ELEM(pImg_hsv, unsigned char, i, j * 3)*2;
+			float S=CV_IMAGE_ELEM(pImg_hsv, unsigned char, i, j * 3+1)/255.0;
+			float V=CV_IMAGE_ELEM(pImg_hsv, unsigned char, i, j * 3+2)/255.0;
+			if(H >= 200 && H <= 250)
+			{
+				if(S >= 0.16 && V >= 0.18)
+				{//蓝色
+					color[0]++;
+				}
+			}
+			if(H >= 36 && H <= 70)
+			{
+				if(S >= 0.16 && V >= 0.18)
+				{//黄色
+					color[1]++;
+				}
+			}
+			if(S <= 0.3 && V >= 0.6)
+			{//白色
+				color[2]++;
+			}
+			if( V <= 0.4)
+			{//黑色
+				color[3]++;
+			}
+		}
+	}
+
+	cout<<"blue:"<<color[0]<<endl;
+	cout<<"yellow:"<<color[1]<<endl;
+	cout<<"white:"<<color[2]<<endl;
+	cout<<"black:"<<color[3]<<endl;
+
+	int max=color[0];
+	colorType=0;
+	for(int i=1;i<4;i++)
+	{
+		if(color[i]>max)
+		{
+			colorType=i;
+			max=color[i];
+		}
+	}
+
+	for(int i=0;i<pImg_hsv->height;i++)
+	{
+		for(int j=0;j<pImg_hsv->width;j++)
+		{
+			int H=CV_IMAGE_ELEM(pImg_hsv, unsigned char, i, j * 3)*2;
+			float S=CV_IMAGE_ELEM(pImg_hsv, unsigned char, i, j * 3+1)/255.0;
+			float V=CV_IMAGE_ELEM(pImg_hsv, unsigned char, i, j * 3+2)/255.0;
+			switch(colorType)
+			{
+			case 0:
+				if(H >= 200 && H <= 250)
+				{
+					if(S >= 0.16 && V >= 0.18)
+					{//蓝色
+						CV_IMAGE_ELEM(pImg_gray, unsigned char, i, j)=255;
+					}
+				}
+				break;
+			case 1:
+				if(H >= 36 && H <= 70)
+				{
+					if(S >= 0.16 && V >= 0.18)
+					{//黄色
+						CV_IMAGE_ELEM(pImg_gray, unsigned char, i, j)=255;
+					}
+				}
+				break;
+			case 2:
+				if(S <= 0.3 && V >= 0.6)
+				{//白色
+					CV_IMAGE_ELEM(pImg_gray, unsigned char, i, j)=255;
+				}
+				break;
+			case 3:
+				if( V <= 0.4)
+				{//黑色
+					CV_IMAGE_ELEM(pImg_gray, unsigned char, i, j)=255;
+				}
+				break;
+			default:
+				if(H >= 200 && H <= 250)
+				{
+					if(S >= 0.16 && V >= 0.18)
+					{//蓝色
+						CV_IMAGE_ELEM(pImg_gray, unsigned char, i, j)=255;
+					}
+				}
+				break;
+			}
+		}
+	}
+
+	cvShowImage("pImg_gray",pImg_gray);
+	cvReleaseImage(&pImg_hsv);
+	cvReleaseImage(&pImg_gray);
+}

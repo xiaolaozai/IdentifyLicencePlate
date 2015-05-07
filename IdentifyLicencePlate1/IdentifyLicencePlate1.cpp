@@ -97,6 +97,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	IplImage* pImg_Canny=NULL;
 	IplImage* pImg_Erode=NULL;
 	IplImage* pImg_HoughLines=NULL;
+	IplImage* pImg_CorrectGray=NULL;
 	IplImage* pImg_LicenceChar[7];//´æ·Å³µÅÆ×Ö·û
 	int colorType=-1;//¼ÇÂ¼À¶µ×£¬»Æµ×£¬ºÚµ×£¬°×µ×
 	if(list_rects.empty())
@@ -163,6 +164,20 @@ int _tmain(int argc, _TCHAR* argv[])
 			pImg_selectRecorrect=cvCreateImage(cvGetSize(pImg_selectColor), IPL_DEPTH_8U,3);
 			pImgProcess->reCorrectPosition(pImg_selectColor,pImg_selectRecorrect,1);
 			cvShowImage("pImg_selectRecorrect",pImg_selectRecorrect);
+
+			int t=0;
+			pImgProcess->myPlateColorHSV(pImg_selectRecorrect,t);
+			//pImg_CorrectGray=cvCreateImage(cvGetSize(pImg_selectRecorrect), IPL_DEPTH_8U,1);
+			//pImg_CorrectGray=pImgProcess->myRGB2Gray(pImg_selectRecorrect,pImg_CorrectGray);
+			////ÖÐÖµÂË²¨
+			//cvSmooth(pImg_CorrectGray,pImg_CorrectGray,CV_MEDIAN,3,3,0);
+			//cvShowImage("pImg_CorrectGray",pImg_CorrectGray);
+
+			//Mat mat_CorrectGray=pImg_CorrectGray;
+			//FileStorage fs("mat_CorrectGray.xml", FileStorage::WRITE);
+			//fs << "mat_CorrectGray" << mat_CorrectGray;  
+			//fs.release();  
+			break;
 
 			//×óÓÒÇÐ¸î
 			pImg_Canny = cvCreateImage(cvGetSize(pImg_selectRecorrect), IPL_DEPTH_8U,1);
@@ -462,6 +477,11 @@ int _tmain(int argc, _TCHAR* argv[])
 	{
 		cvReleaseImage(&pImg_selectRecorrect);
 	}
+	if(pImg_CorrectGray!=NULL)
+	{
+		cvReleaseImage(&pImg_CorrectGray);
+	}
+	
 	if(pImg_selectGray!=NULL)
 	{
 		cvReleaseImage(&pImg_selectGray);
