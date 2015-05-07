@@ -973,12 +973,20 @@ void IplImageProcessing::mySearchVerPosition(IplImage* pImg_src,int &y1,int &y2,
 	//查询上行
 	for(int i=1,top=pImg_src->height*yscale;i<=top&&!flag_row_top;i++)
 	{
-		int count=0;
+		int count=0,nw=0;
 		for(int j=left;j<right;j++)
 		{   
 			if(CV_IMAGE_ELEM(pImg_src,unsigned char,i,j)!=CV_IMAGE_ELEM(pImg_src,unsigned char,i+1,j))
 			{
-				count++;
+				if(nw>=3)
+				{
+					count++;
+				}
+				nw=0;
+			}
+			else
+			{
+				nw++;
 			}
 			
 			if(count>=nTimes)
@@ -987,18 +995,26 @@ void IplImageProcessing::mySearchVerPosition(IplImage* pImg_src,int &y1,int &y2,
 				flag_row_top=true;
 			}
 		}
-		//cout<<"top count:"<<count<<endl;
+		cout<<"top count:"<<count<<endl;
 	}
 
 	//查询下行
 	for(int i=pImg_src->height-2,bottom=pImg_src->height*(1-yscale);i>=bottom&&!flag_row_bottom;i--)
 	{
-		int count=0;
+		int count=0,nw=0;
 		for(int j=left;j<right;j++)
 		{   
 			if(CV_IMAGE_ELEM(pImg_src,unsigned char,i,j)!=CV_IMAGE_ELEM(pImg_src,unsigned char,i-1,j))
 			{
-				count++;
+				if(nw>=3)
+				{
+					count++;
+				}
+				nw=0;
+			}
+			else
+			{
+				nw++;
 			}
 			if(count>=nTimes)
 			{
@@ -1006,7 +1022,7 @@ void IplImageProcessing::mySearchVerPosition(IplImage* pImg_src,int &y1,int &y2,
 				flag_row_bottom=true;
 			}
 		}
-		//cout<<"bottom count:"<<count<<endl;
+		cout<<"bottom count:"<<count<<endl;
 	}
 }
 

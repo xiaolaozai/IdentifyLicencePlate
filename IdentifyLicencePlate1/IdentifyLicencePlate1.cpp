@@ -159,44 +159,10 @@ int _tmain(int argc, _TCHAR* argv[])
 		//精确查询车牌位置
 		if(p==1)//是车牌的粗选位置
 		{
-
 			//车牌校正
 			pImg_selectRecorrect=cvCreateImage(cvGetSize(pImg_selectColor), IPL_DEPTH_8U,3);
 			pImgProcess->reCorrectPosition(pImg_selectColor,pImg_selectRecorrect,1);
 			cvShowImage("pImg_selectRecorrect",pImg_selectRecorrect);
-
-	/*		pImgProcess->myHistogramStretch(pImg_selectGray,pImg_selectGray);
-			cvShowImage("pImg_selectGray3",pImg_selectGray);*/
-
-			//pImg_sobel = cvCreateImage(cvGetSize(pImg_selectRecorrect), IPL_DEPTH_8U,1);
-			//cvSobel(pImg_selectGray,pImg_sobel,0,1,3);//垂直检测
-			//cvShowImage("cvSobel_y",pImg_sobel);
-			//break;
-			//cvSobel(pImg_stretch,pImg_sobel,1,0,3);//水平检测
-			//cvShowImage("cvSobel_x",pImg_sobel);
-	
-
-			//cout<<"width:"<<pImg_Canny->width<<endl;
-			//cout<<"height:"<<pImg_Canny->height<<endl;
-
-			//break;
-
-
-			//形态学
-			//int nVer=2,nHor=2;
-			//pImg_Erode = cvCreateImage(cvGetSize(pImg_Canny), IPL_DEPTH_8U,1);
-			//pImg_Erode=pImgProcess->myErode(pImg_Canny,nVer,1,nHor,0);//垂直腐蚀
-			//cvShowImage("cvErode_y",pImg_Erode);
-			//pImg_Erode=pImgProcess->myErode(pImg_Canny,nVer,0,nHor,1);//水平腐蚀
-			//cvShowImage("cvErode_x",pImg_Erode);
-
-			//pImg_dilate = cvCreateImage(cvGetSize(pImg_Canny), IPL_DEPTH_8U,1);
-			//pImg_stretch=pImgProcess->myDilate(pImg_Canny,nVer,1,nHor,0);//垂直膨胀
-			//cvShowImage("cvDilate_y",pImg_stretch);
-			//pImg_stretch=pImgProcess->myDilate(pImg_Canny,nVer,0,nHor,1);//水平膨胀
-			//cvShowImage("cvDilate_x",pImg_stretch);
-			
-		/*	break;*/
 
 			//左右切割
 			pImg_Canny = cvCreateImage(cvGetSize(pImg_selectRecorrect), IPL_DEPTH_8U,1);
@@ -221,7 +187,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 			//上下切割
 			int yy0=y0,yy1=y1;
-			int nTimes=9;
+			int nTimes=4;
 			pImgProcess->mySearchVerPosition(pImg_PlateAdaptiveThreshold,y0,y1,nTimes);
 			
 			if(y1>yy1)
