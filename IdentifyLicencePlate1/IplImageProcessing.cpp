@@ -159,6 +159,66 @@ IplImage* IplImageProcessing::myGrayStretch(IplImage* src,int threshold1,int thr
 }
 
 /****************************************
+myHistogramStretch
+直方图拉伸
+
+pImg_src
+单通道源灰度图片
+
+pImg_dst
+单通道输出灰度图片
+******************************************/
+void IplImageProcessing::myHistogramStretch(IplImage *pImg_src,IplImage *pImg_dst)
+{
+    //p[]存放图像各个灰度级的出现概率；
+    //p1[]存放各个灰度级之前的概率和，用于直方图变换；
+    //num[]存放图象各个灰度级出现的次数;
+
+    float p[256],p1[256],num[256];
+    //清空三个数组
+    memset(p,0,sizeof(p));
+    memset(p1,0,sizeof(p1));
+    memset(num,0,sizeof(num));
+
+    int height=pImg_src->height;
+    int width=pImg_src->width;
+    long nSum = height * width;
+
+    //求存放图象各个灰度级出现的次数
+    // to do use openmp
+    for(int x=0;x<pImg_src->width;x++)  
+    {  
+        for(int y=0;y<pImg_src-> height;y++){  
+            uchar v=((uchar*)(pImg_src->imageData + pImg_src->widthStep*y))[x];  
+            num[v]++;  
+        }  
+    }
+
+    //求存放图像各个灰度级的出现概率
+    for(int i=0;i<256;i++)
+    {
+        p[i]=num[i]/nSum;
+    }
+
+    //求存放各个灰度级之前的概率和
+    for(int i=0;i<256;i++)
+    {
+        for(int k=0;k<=i;k++)
+            p1[i]+=p[k];
+    }
+
+    //直方图变换
+    for(int x=0;x<pImg_src->width;x++)  
+    {  
+        for(int y=0;y<pImg_src-> height;y++){  
+            uchar v=((uchar*)(pImg_src->imageData + pImg_src->widthStep*y))[x];  
+            ((uchar*)(pImg_dst->imageData + pImg_dst->widthStep*y))[x]= p1[v]*255;              
+        }  
+    } 
+} 
+
+
+/****************************************
 reCorrectPosition
 重新矫正位置
 
@@ -179,7 +239,6 @@ void IplImageProcessing::reCorrectPosition(IplImage* pImg_src,IplImage* pImg_dst
 	CvMemStorage* storage=NULL; 
 	if(pImg_src==NULL)
 	{
-		pImg_dst=NULL;
 		cout<<"IplImageProcessing::reCorrectPosition bad arguement"<<endl;
 		return;
 	}
@@ -189,13 +248,18 @@ void IplImageProcessing::reCorrectPosition(IplImage* pImg_src,IplImage* pImg_dst
 	int size=(type)?pImg_src->width:pImg_src->height;
 	if(type)
 	{
-		cvSobel(pImg_gray,pImg_sobel,0,1,3);//垂直检测
-		//cvShowImage("cvSobel_y",pImg_sobel);
+		cvSobel(pImg_gray,pImg_sobel,0,2,3);//垂直检测
+		cvShowImage("cvSobel_y",pImg_sobel);
+		//cvErode(pImg_sobel,pImg_sobel,NULL,1);//垂直腐蚀
+		//cvShowImage("cvErode_y",pImg_sobel);
 	}
 	else
 	{
-		cvSobel(pImg_gray,pImg_sobel,1,0,3);//水平检测
-		//cvShowImage("cvSobel_x",pImg_sobel);
+		cvSobel(pImg_gray,pImg_sobel,2,0,3);//水平检测
+		cvShowImage("cvSobel_x",pImg_sobel);
+
+		//cvErode(pImg_sobel,pImg_sobel,NULL,1);//垂直腐蚀
+		//cvShowImage("cvErode_y",pImg_sobel);
 	}
 	
 	//进行霍夫线变换
@@ -206,9 +270,9 @@ void IplImageProcessing::reCorrectPosition(IplImage* pImg_src,IplImage* pImg_dst
     CvSeq* lines = 0;  
 	double rho=1;  
 	double theta=CV_PI/180;  
-	double threshold=size*0.7;  
+	double threshold=size*0.8;  
 	double min_length=size*0.5;//CV_HOUGH_PROBABILISTIC  
-	double sepration_connection=size*0.01;//CV_HOUGH_PROBABILISTIC  
+	double sepration_connection=size*0.005;//CV_HOUGH_PROBABILISTIC  
       
 	//binary image is needed.  
 	lines = cvHoughLines2(  
@@ -221,25 +285,25 @@ void IplImageProcessing::reCorrectPosition(IplImage* pImg_src,IplImage* pImg_dst
 		min_length,   
 		sepration_connection); 
 
-	////画寻找出直线图
-	//for(int i = 0; i < lines->total; i++ )
-	//{
-	//	float* line = (float*)cvGetSeqElem(lines,i);
-	//	float rho = line[0];
-	//	float theta = line[1];
-	//	cout<<"rho:"<<rho<<endl;
-	//	cout<<"theta:"<<theta<<endl;
-	//	CvPoint pt1, pt2;
-	//	double a = cos(theta), b = sin(theta);
-	//	double x0 = a*rho, y0 = b*rho;
-	//	pt1.x = cvRound(x0 + 1000*(-b));
-	//	pt1.y = cvRound(y0 + 1000*(a));
-	//	pt2.x = cvRound(x0 - 1000*(-b));
-	//	pt2.y = cvRound(y0 - 1000*(a));
-	//	cvLine( pImg_HoughLines, pt1, pt2, CV_RGB(255,0,0), 1, 8, 0 );
-	//}
+	//画寻找出直线图
+	for(int i = 0; i < lines->total; i++ )
+	{
+		float* line = (float*)cvGetSeqElem(lines,i);
+		float rho = line[0];
+		float theta = line[1];
+		cout<<"rho:"<<rho<<endl;
+		cout<<"theta:"<<theta<<endl;
+		CvPoint pt1, pt2;
+		double a = cos(theta), b = sin(theta);
+		double x0 = a*rho, y0 = b*rho;
+		pt1.x = cvRound(x0 + 1000*(-b));
+		pt1.y = cvRound(y0 + 1000*(a));
+		pt2.x = cvRound(x0 - 1000*(-b));
+		pt2.y = cvRound(y0 - 1000*(a));
+		cvLine( pImg_HoughLines, pt1, pt2, CV_RGB(255,0,0), 1, 8, 0 );
+	}
 
-	//cvShowImage("pImg_HoughLines",pImg_HoughLines);
+	cvShowImage("pImg_HoughLines",pImg_HoughLines);
 
 	if(lines->total>0)
 	{
@@ -256,38 +320,37 @@ void IplImageProcessing::reCorrectPosition(IplImage* pImg_src,IplImage* pImg_dst
 		CvMat* rot_mat = cvCreateMat (2, 3, CV_32FC1); 
 		cv2DRotationMatrix (center, angel_x, scale, rot_mat);  
 		cvWarpAffine (pImg_src, pImg_dst, rot_mat); 
-		//cvShowImage("pImg_dst1",pImg_dst);
+		cvShowImage("pImg_dst1",pImg_dst);
 
-		//float angel_y=angelD;
-		//cout<<"angel_y:"<<angel_y<<endl;
-		//CvPoint2D32f srcTri[3],dstTri[3];
-		////仿射变换三点坐标
-		//srcTri[0].x=0;
-		//srcTri[0].y=0;
-		//srcTri[1].x=pImg_dst->width-1;
-		//srcTri[1].y=0;
-		//srcTri[2].x=0;
-		//srcTri[2].y=pImg_dst->height-1;
+		float angel_y=-angel_x;
+		cout<<"angel_y:"<<angel_y<<endl;
+		cout<<"tan(angel_y*CV_PI/180):"<<tan(angel_y*CV_PI/180)<<endl;
+		CvPoint2D32f srcTri[3],dstTri[3];
+		//仿射变换三点坐标
+		srcTri[0].x=0;
+		srcTri[0].y=0;
+		srcTri[1].x=pImg_dst->width-1;
+		srcTri[1].y=0;
+		srcTri[2].x=0;
+		srcTri[2].y=pImg_dst->height-1;
 
-		////目标仿射变换三点坐标
-		//dstTri[0].x=0;
-		//dstTri[0].y=0;
-		//dstTri[1].x=pImg_dst->width-1-pImg_dst->height*tan(angel_y);
-		//dstTri[1].y=0;
-		//dstTri[2].x=pImg_dst->height*tan(angel_y)-1;
-		//dstTri[2].y=pImg_dst->height-1;
+		//目标仿射变换三点坐标
+		dstTri[0].x=0;
+		dstTri[0].y=0;
+		dstTri[1].x=pImg_dst->width-1;
+		dstTri[1].y=0;
+		dstTri[2].x=(pImg_dst->height-1)*tan(angel_y*CV_PI/180);
+		dstTri[2].y=pImg_dst->height-1;
 
-		//CvMat* warp_mat = cvCreateMat (2, 3, CV_32FC1); 
-		//cvGetAffineTransform(srcTri,dstTri,warp_mat);
-		//cvWarpAffine(pImg_dst,pImg_dst,warp_mat);
+		CvMat* warp_mat = cvCreateMat (2, 3, CV_32FC1); 
+		cvGetAffineTransform(srcTri,dstTri,warp_mat);
+		cvWarpAffine(pImg_dst,pImg_dst,warp_mat);
 		//cvShowImage("pImg_dst2",pImg_dst);
 	}
 	else
 	{
-		pImg_dst=NULL;
-		return;
+		cvCopy(pImg_src,pImg_dst);
 	}
-	
 	//释放资源
 	//cvWaitKey(0);
 	cvReleaseMemStorage(&storage);
@@ -800,8 +863,8 @@ list<CvRect> IplImageProcessing::myRoughing(IplImage* src,IplImage* pImg_contour
 }
 
 /****************************************
-mySpecificPlate
-精确提取车牌
+mySearchHorPosition
+利用车牌颜色差查询车牌左右列字符位置
 
 src
 单通道源图片
@@ -815,24 +878,17 @@ x1
 x2
 右列结束位置
 
-nX
-行阀值
-
-y1
-上行开始位置
-
-y2
-下行结束位置
-
 nY
 列阀值
 ******************************************/
-void IplImageProcessing::mySpecificPlate(IplImage* src,int subGray,int &x1,int &x2,int nX,int &y1,int &y2,int nY)
+void IplImageProcessing::mySearchHorPosition(IplImage* src,int &x1,int &x2,int subGray,int nY)
 {
 	bool flag_col_left=false;
 	bool flag_col_right=false;
-	bool flag_row_top=false;
-	bool flag_row_bottom=false;
+
+	float xscale=0.2;
+	int left=src->width*xscale;
+	int right=src->width*(1-xscale);
 
 	if(src==NULL)
 	{
@@ -840,7 +896,7 @@ void IplImageProcessing::mySpecificPlate(IplImage* src,int subGray,int &x1,int &
 		return;
 	}
 	//查询左列
-	for(int j=0;j<=src->width/2&&!flag_col_left;j++)
+	for(int j=left;j>=0&&!flag_col_left;j--)
 	{
 		int count=0;
 		for(int i=0;i<src->height;i++)
@@ -861,7 +917,7 @@ void IplImageProcessing::mySpecificPlate(IplImage* src,int subGray,int &x1,int &
 		}
 	}
 	//查询右列
-	for(int j=src->width-1;j>=src->width/2&&!flag_col_right;j--)
+	for(int j=right;j<src->height&&!flag_col_right;j++)
 	{
 		int count=0;
 		for(int i=0;i<src->height;i++)
@@ -881,62 +937,76 @@ void IplImageProcessing::mySpecificPlate(IplImage* src,int subGray,int &x1,int &
 			}
 		}
 	}
+}
 
+
+/****************************************
+mySearchVerPosition
+利用字符跳跃次数查询车牌上下行字符位置
+
+src
+单通道源图片
+
+x1
+左列开始位置
+
+x2
+右列结束位置
+
+nTimes
+行阀值
+******************************************/
+void IplImageProcessing::mySearchVerPosition(IplImage* pImg_src,int &y1,int &y2,int nTimes)
+{
+	bool flag_row_top=false;
+	bool flag_row_bottom=false;
+	float yscale=0.3;
+	float xscale=0.2;
+	int left=pImg_src->width*xscale;
+	int right=pImg_src->width*(1-xscale);
+
+	if(pImg_src==NULL)
+	{
+		cout<<"error IplImageProcessing::mySearchVerPosition bad gargument"<<endl;
+		return;
+	}
 	//查询上行
-	for(int i=0;i<=src->height/2&&!flag_row_top;i++)
+	for(int i=1,top=pImg_src->height*yscale;i<=top&&!flag_row_top;i++)
 	{
 		int count=0;
-		for(int j=0;j<src->width;j++)
+		for(int j=left;j<right;j++)
 		{   
-			if(abs(CV_IMAGE_ELEM(src,unsigned char,i,j)-CV_IMAGE_ELEM(src,unsigned char,i+1,j))>=subGray)
+			if(CV_IMAGE_ELEM(pImg_src,unsigned char,i,j)!=CV_IMAGE_ELEM(pImg_src,unsigned char,i+1,j))
 			{
 				count++;
 			}
-			else
-			{
-				count=0;
-			}
-			if(count>=nX)
+			
+			if(count>=nTimes)
 			{
 				y1 = i;
 				flag_row_top=true;
 			}
 		}
+		//cout<<"top count:"<<count<<endl;
 	}
 
 	//查询下行
-	for(int i=src->height-1;i<=src->height/2&&!flag_row_bottom;i--)
+	for(int i=pImg_src->height-2,bottom=pImg_src->height*(1-yscale);i>=bottom&&!flag_row_bottom;i--)
 	{
 		int count=0;
-		for(int j=0;j<src->width;j++)
+		for(int j=left;j<right;j++)
 		{   
-			if(abs(CV_IMAGE_ELEM(src,unsigned char,i,j)-CV_IMAGE_ELEM(src,unsigned char,i-1,j))>=subGray)
+			if(CV_IMAGE_ELEM(pImg_src,unsigned char,i,j)!=CV_IMAGE_ELEM(pImg_src,unsigned char,i-1,j))
 			{
 				count++;
 			}
-			else
-			{
-				count=0;
-			}
-			if(count>=nX)
+			if(count>=nTimes)
 			{
 				y2 = i;
 				flag_row_bottom=true;
 			}
 		}
-	}
-
-	//长宽比为440:140=22:7
-	double w=x2-x1;
-	double h=y2-y1;
-
-	cout<<"x1="<<x1<<" x2="<<x2<<endl;
-	cout<<"y1="<<y1<<" y2="<<y2<<endl;
-	cout<<"w/h="<<w/h<<endl;
-
-	if(w/h>=3.0&&w/h<=3.5)
-	{
-		cout<<"find it"<<endl;
+		//cout<<"bottom count:"<<count<<endl;
 	}
 }
 
@@ -1041,7 +1111,7 @@ bool IplImageProcessing::isMyLicence(IplImage* src,int subGray,int &x1,int &x2,i
 	}
 
 	//查询下行
-	for(int i=src->height-1;i<=src->height/2&&!flag_row_bottom;i--)
+	for(int i=src->height-1;i>=src->height/2&&!flag_row_bottom;i--)
 	{
 		int count=0;
 		for(int j=0;j<src->width;j++)
