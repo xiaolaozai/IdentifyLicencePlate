@@ -165,61 +165,43 @@ int _tmain(int argc, _TCHAR* argv[])
 			pImgProcess->reCorrectPosition(pImg_selectColor,pImg_selectRecorrect,1);
 			cvShowImage("pImg_selectRecorrect",pImg_selectRecorrect);
 
-			int t=0;
-			pImgProcess->myPlateColorHSV(pImg_selectRecorrect,t);
-			//pImg_CorrectGray=cvCreateImage(cvGetSize(pImg_selectRecorrect), IPL_DEPTH_8U,1);
-			//pImg_CorrectGray=pImgProcess->myRGB2Gray(pImg_selectRecorrect,pImg_CorrectGray);
-			////中值滤波
-			//cvSmooth(pImg_CorrectGray,pImg_CorrectGray,CV_MEDIAN,3,3,0);
-			//cvShowImage("pImg_CorrectGray",pImg_CorrectGray);
+			pImg_selectThreshold=cvCreateImage(cvGetSize(pImg_selectRecorrect), IPL_DEPTH_8U,1);
+			pImgProcess->myGetPlateBackColor(pImg_selectRecorrect,pImg_selectThreshold,colorType);
+			cvThreshold(pImg_selectThreshold,pImg_selectThreshold,0,255,CV_THRESH_OTSU);
+			cvShowImage("pImg_selectThreshold",pImg_selectThreshold);
 
-			//Mat mat_CorrectGray=pImg_CorrectGray;
-			//FileStorage fs("mat_CorrectGray.xml", FileStorage::WRITE);
-			//fs << "mat_CorrectGray" << mat_CorrectGray;  
-			//fs.release();  
-			break;
+			//显示行列直方图
+			pImg_hist=cvCreateImage(cvSize(200,100), IPL_DEPTH_8U,3);
+			pPlate->showHistogram(pImg_selectThreshold,pImg_hist,0);
+			cvShowImage("pImg_hist_x",pImg_hist);
+			pPlate->showHistogram(pImg_selectThreshold,pImg_hist,1);
+			cvShowImage("pImg_hist_y",pImg_hist);
 
-			//左右切割
-			pImg_Canny = cvCreateImage(cvGetSize(pImg_selectRecorrect), IPL_DEPTH_8U,1);
-			cvSmooth(pImg_selectGray, pImg_Canny, CV_BLUR, 3, 3, 0, 0 );
-			cvCanny(pImg_selectGray, pImg_Canny, 50, 150, 3);  //采用canny算法进行边缘检测
-
-			int x0=0,x1=pImg_Canny->width;
-			int y0=0,y1=pImg_Canny->height;
-			float xT=0.65;
-			float xV=0.75;
-			float yT=0.45;
-			float yV=0.75;
-			pPlate->getLicencePosition(pImg_Canny,x0,x1,xV,xT,y0,y1,yV,yT);
-
-			pImg_selectGray=pImgProcess->myRGB2Gray(pImg_selectRecorrect,pImg_selectGray);
-			cvShowImage("pImg_selectGray2",pImg_selectGray);
-			//二值化
-			pImg_PlateAdaptiveThreshold = cvCreateImage(cvGetSize(pImg_selectRecorrect), IPL_DEPTH_8U,1);
-			//cvThreshold(pImg_selectGray,pImg_PlateAdaptiveThreshold,0,255,CV_THRESH_OTSU);
-			pImg_PlateAdaptiveThreshold=pImgProcess->myThreshold(pImg_selectGray,0);
-			cvShowImage("pImg_PlateAdaptiveThreshold",pImg_PlateAdaptiveThreshold);
-
-			//上下切割
-			int yy0=y0,yy1=y1;
-			int nTimes=4;
-			pImgProcess->mySearchVerPosition(pImg_PlateAdaptiveThreshold,y0,y1,nTimes);
-			
-			if(y1>yy1)
-			{
-				y1=yy1;
-			}
+			int x0=0,x1=pImg_selectThreshold->width;
+			int y0=0,y1=pImg_selectThreshold->height;
+			float xT=0.83;
+			float yT=0.850;
+			pPlate->getPlatePosition(pImg_selectThreshold,x0,x1, xT,y0,y1,yT);
 
 			int cutW=x1-x0;
 			int cutH=y1-y0;
+			int sy=cutH/10;
+			int sx=0;
+			if(cutW>80)
+			{
+				sx=(cutW-80)/10;
+			}
+
+			x0+=sx;
+			y0+=sy;
+			cutW=x1-x0-2*sx;
+			cutH=y1-y0-2*sy;
+
 			pImg_selectLicence=cvCreateImage(cvSize(cutW,cutH),IPL_DEPTH_8U,3);
 			pImgProcess->myCutImage(pImg_selectRecorrect,pImg_selectLicence,cvRect(x0,y0,cutW,cutH));
 			cvShowImage("pImg_selectLicence",pImg_selectLicence);
 			cout<<"pImg_selectLicence->width:"<<pImg_selectLicence->width<<endl;
 			cout<<"pImg_selectLicence->height:"<<pImg_selectLicence->height<<endl;
-
-			//寻找底色
-			pImgProcess->myExtractHSV(pImg_selectLicence,colorType);//colorType!=-1，说明找到底色
 			break;
 		}
 		list_rects.pop_front();

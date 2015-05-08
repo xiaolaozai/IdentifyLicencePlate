@@ -359,6 +359,34 @@ void IplImageProcessing::reCorrectPosition(IplImage* pImg_src,IplImage* pImg_dst
 	cvReleaseImage(&pImg_HoughLines);
 }
 
+/****************************************
+myAffineImage
+旋转图片角度
+
+pImg_src
+源图片
+
+pImg_dst
+输出图片
+
+angel
+旋转角度
+******************************************/
+void IplImageProcessing::myAffineImage(IplImage* pImg_src,IplImage* pImg_dst,int angel)
+{
+	if(pImg_src==NULL)
+	{
+		cout<<"error bad argument"<<endl;
+		cvCopy(pImg_src,pImg_dst);
+		return;
+	}
+
+	CvPoint2D32f center = cvPoint2D32f (pImg_src->width / 2, pImg_src->height / 2); 
+	CvMat* rot_mat = cvCreateMat (2, 3, CV_32FC1); 
+	cv2DRotationMatrix (center, angel, 1.0, rot_mat);  
+	cvWarpAffine(pImg_src, pImg_dst, rot_mat); 
+}
+
 
 /****************************************
 myDilate
@@ -1485,31 +1513,36 @@ void IplImageProcessing::myExtractHSV(IplImage* src,int &colorType)
 
 
 /****************************************
-myPlateColorHSV
-提取车牌主要颜色并进行处理
+myGetPlateBackColor
+提取车牌背景颜色
 
 src
 源图片
+
+dst
+输出图片
 
 colorType
 底色类型 -1,0,1,2,3分别代表出错，蓝底，黄底，白底，黑底
 
 ******************************************/
-void IplImageProcessing::myPlateColorHSV(IplImage* src,int &colorType)
+void IplImageProcessing::myGetPlateBackColor(IplImage* src,IplImage* dst,int &colorType)
 {
 	if(src==NULL)
 	{
-		cout<<"myExtractHSV image source is NULL"<<endl;
+		cout<<"myGetPlateBackColor image source is NULL"<<endl;
 		colorType=-1;
 		return;
 	}
 	IplImage* pImg_hsv=cvCreateImage(cvGetSize(src),IPL_DEPTH_8U,3);
-	IplImage* pImg_gray=cvCreateImage(cvGetSize(src),IPL_DEPTH_8U,1);
 	cvCvtColor(src,pImg_hsv,CV_BGR2HSV);//转换HSV
 
 	int color[4];//蓝，黄，白，黑
 	memset(color,0,sizeof(color));
 
+	//控制颜色部分，如H=240（蓝色），H=0（红色），H=120（绿色）,H=60(黄色)
+	//V=0代表黑色;V=1,S=0代表白色
+	//亮度(v)小于25%为黑色区域，亮度(v)大于75%并且饱和度(s)小于20%为白色区域
 	for(int i=0;i<pImg_hsv->height;i++)
 	{
 		for(int j=0;j<pImg_hsv->width;j++)
@@ -1557,6 +1590,7 @@ void IplImageProcessing::myPlateColorHSV(IplImage* src,int &colorType)
 			max=color[i];
 		}
 	}
+	cout<<"colorType:"<<colorType<<endl;
 
 	for(int i=0;i<pImg_hsv->height;i++)
 	{
@@ -1572,7 +1606,7 @@ void IplImageProcessing::myPlateColorHSV(IplImage* src,int &colorType)
 				{
 					if(S >= 0.16 && V >= 0.18)
 					{//蓝色
-						CV_IMAGE_ELEM(pImg_gray, unsigned char, i, j)=255;
+						CV_IMAGE_ELEM(dst, unsigned char, i, j)=255;
 					}
 				}
 				break;
@@ -1581,20 +1615,20 @@ void IplImageProcessing::myPlateColorHSV(IplImage* src,int &colorType)
 				{
 					if(S >= 0.16 && V >= 0.18)
 					{//黄色
-						CV_IMAGE_ELEM(pImg_gray, unsigned char, i, j)=255;
+						CV_IMAGE_ELEM(dst, unsigned char, i, j)=255;
 					}
 				}
 				break;
 			case 2:
 				if(S <= 0.3 && V >= 0.6)
 				{//白色
-					CV_IMAGE_ELEM(pImg_gray, unsigned char, i, j)=255;
+					CV_IMAGE_ELEM(dst, unsigned char, i, j)=255;
 				}
 				break;
 			case 3:
 				if( V <= 0.4)
 				{//黑色
-					CV_IMAGE_ELEM(pImg_gray, unsigned char, i, j)=255;
+					CV_IMAGE_ELEM(dst, unsigned char, i, j)=255;
 				}
 				break;
 			default:
@@ -1602,7 +1636,7 @@ void IplImageProcessing::myPlateColorHSV(IplImage* src,int &colorType)
 				{
 					if(S >= 0.16 && V >= 0.18)
 					{//蓝色
-						CV_IMAGE_ELEM(pImg_gray, unsigned char, i, j)=255;
+						CV_IMAGE_ELEM(dst, unsigned char, i, j)=255;
 					}
 				}
 				break;
@@ -1610,7 +1644,5 @@ void IplImageProcessing::myPlateColorHSV(IplImage* src,int &colorType)
 		}
 	}
 
-	cvShowImage("pImg_gray",pImg_gray);
 	cvReleaseImage(&pImg_hsv);
-	cvReleaseImage(&pImg_gray);
 }

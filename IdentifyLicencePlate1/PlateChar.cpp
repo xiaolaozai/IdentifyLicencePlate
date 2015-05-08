@@ -265,112 +265,55 @@ void PlateChar::getPlatePosition(IplImage* pImg_src,int &x0,int &x1, float xT,in
 	Mat mat_src=pImg_src;
 	Mat mat_hist_x=getHistogram(mat_src,1,1);
 	Mat mat_hist_y=getHistogram(mat_src,0,1);
-	int maxNum=3,count=0;
-	bool flag=false;
-	for(int j=3;j<(int)mat_hist_y.cols*0.2;j++)//横向左起方向
+	for(int j=0;j<mat_hist_y.cols*0.3;j++)//横向左起方向
 	{
 		float value=mat_hist_y.at<float>(0,j);
 		if(value>xT)
 		{
-			if(!flag)
-			{
-				x0=j;
-				cout<<"mat_hist_y.cols*0.3="<<mat_hist_y.cols*0.3<<endl;
-				cout<<"mat_hist_y xT="<<xT<<endl;
-				cout<<"mat_hist_y x0 value="<<value<<endl;
-				cout<<"mat_hist_y x0="<<x0<<endl;
-				flag=true;
-			}
-			if(value==1)
-			{
-				count++;	
-			}
-			else
-			{
-				count=0;
-			}
-			if(count>=maxNum)
-			{
-				maxNum++;
-				x0=j;
-				cout<<"mat_hist_y x0 value="<<value<<endl;
-				cout<<"mat_hist_y x0="<<x0<<endl;
-				
-			}
+			x0=j;
+			cout<<"mat_hist_y.cols*0.3="<<mat_hist_y.cols*0.3<<endl;
+			cout<<"mat_hist_y xT="<<xT<<endl;
+			cout<<"mat_hist_y x0 value="<<value<<endl;
+			cout<<"mat_hist_y x0="<<x0<<endl;
+			break;
 		}
 	}
-	flag=false;count=0;maxNum=3;
-	for(int j=mat_hist_y.cols-4;j>=(int)mat_hist_y.cols*0.8;j--)//横向右起方向
+	for(int j=mat_hist_y.cols-1;j>=mat_hist_y.cols*0.7;j--)//横向右起方向
 	{
 		float value=mat_hist_y.at<float>(0,j);
 		if(value>xT)
 		{
-			if(!flag)
-			{
-				x1=j;
-				cout<<"mat_hist_y.cols*0.8="<<mat_hist_y.cols*0.8<<endl;
-				cout<<"mat_hist_y x1 value="<<value<<endl;
-				cout<<"mat_hist_y x1="<<x1<<endl;
-				flag=true;
-			}
-			if(value==1)
-			{
-				count++;	
-			}
-			else
-			{
-				count=0;
-			}
-			if(count>=maxNum)
-			{
-				maxNum++;
-				x1=j;
-				cout<<"mat_hist_y x1 value="<<value<<endl;
-				cout<<"mat_hist_y x1="<<x1<<endl;
-			}
+			x1=j;
+			cout<<"mat_hist_y.cols*0.7="<<mat_hist_y.cols*0.7<<endl;
+			cout<<"mat_hist_y x1 value="<<value<<endl;
+			cout<<"mat_hist_y x1="<<x1<<endl;
+			break;
 		}
 	}
 
-	flag=false;
-	for(int j=2;j<mat_hist_x.cols;j++)
+	for(int j=0;j<mat_hist_x.cols*0.7;j++)
 	{
 		float value=mat_hist_x.at<float>(0,j);
 		if(value>yT)
 		{
-			if(!flag)
-			{
-				y0=j;//上起方向
-				flag=true;
-				cout<<"mat_hist_x yT="<<yT<<endl;
-				cout<<"mat_hist_x y0 value="<<value<<endl;
-				cout<<"mat_hist_x y0="<<y0<<endl;
-			}
-
-			if(value>0.95)//特别大的
-			{
-				if(j<mat_hist_x.cols*0.3)//上起位置
-				{
-					y0=j+1;
-					cout<<"mat_hist_x y0 value="<<value<<endl;
-					cout<<"mat_hist_x y0="<<y0<<endl;
-				}
-				if(j>mat_hist_x.cols*0.7)//下起位置
-				{
-					cout<<"mat_hist_x y1 value="<<value<<endl;
-					cout<<"mat_hist_x y1="<<y1<<endl;
-					break;
-				}
-			}
-			y1=j;//从上起向下起方向的方向一定是连续的
+			y0=j;//上起方向
+			cout<<"mat_hist_x yT="<<yT<<endl;
+			cout<<"mat_hist_x y0 value="<<value<<endl;
+			cout<<"mat_hist_x y0="<<y0<<endl;
+			break;
 		}
-		else
+	}
+
+	for(int j=mat_hist_x.cols-1;j>=mat_hist_x.cols*0.7;j--)//下起方向
+	{
+		float value=mat_hist_x.at<float>(0,j);
+		if(value>yT)
 		{
-			if(flag&&j>mat_hist_x.cols*0.7) 
-			{
-				cout<<"mat_hist_x y1 value="<<value<<endl;
-				cout<<"mat_hist_x y1="<<y1<<endl;
-				break;
-			}
+			y1=j;
+			cout<<"mat_hist_x.cols*0.7="<<mat_hist_y.cols*0.7<<endl;
+			cout<<"mat_hist_x y1 value="<<value<<endl;
+			cout<<"mat_hist_x y1="<<y1<<endl;
+			break;
 		}
 	}
 }

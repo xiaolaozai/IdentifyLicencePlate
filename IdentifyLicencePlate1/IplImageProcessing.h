@@ -21,6 +21,7 @@ public:
 	bool isMyLicence(IplImage* src,int subGray,int &x1,int &x2,int nX,int &y1,int &y2,int nY);
 	void myExtractRGB(IplImage* src,int &colorType,float blueThreshold,float yellowThreshold,float whiteThreshold,float blackThreshold);
 	void myExtractHSV(IplImage* src,int &colorType);
-	void myPlateColorHSV(IplImage* src,int &colorType);
+	void myGetPlateBackColor(IplImage* src,IplImage* dst,int &colorType);
+	void myAffineImage(IplImage* pImg_src,IplImage* pImg_dst,int angel);
 	~IplImageProcessing(void);
 };

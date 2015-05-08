@@ -1,6 +1,7 @@
 #include "StdAfx.h"
 #include "IdentifyCharANN.h"
 #include "PlateChar.h"
+#include "IplImageProcessing.h"
 
 
 IdentifyCharANN::IdentifyCharANN(void)
@@ -149,6 +150,7 @@ dir_type
 void IdentifyCharANN::setDataFile(string dir_path, string save_path, string dir_type)
 {
 	PlateChar plate;
+	IplImageProcessing ImgProcess;
 	Mat mat_classes;
 	Mat mat_trainingData5;
 	Mat mat_trainingData10;
@@ -163,7 +165,7 @@ void IdentifyCharANN::setDataFile(string dir_path, string save_path, string dir_
     long Handle1 = _findfirst(strfind.c_str(), &FileInfo1);
     if (Handle1 == -1L)
     {
-        cerr << "error IdentifyCharANN::setTrainFile can not match the folder path Handle1" << endl;
+        cerr << "error IdentifyCharANN::setDataFile can not match the folder path Handle1" << endl;
         return;
     }
 	int k=-1;
@@ -189,7 +191,7 @@ void IdentifyCharANN::setDataFile(string dir_path, string save_path, string dir_
 				if (Handle2 == -1L)  
 				{  
 					_findclose(Handle2);
-					cerr << "error IdentifyCharANN::setTrainFile can not match the folder path Handle2" << endl;
+					cerr << "error IdentifyCharANN::setDataFile can not match the folder path Handle2" << endl;
 					break;  
 				}  
       
@@ -202,9 +204,10 @@ void IdentifyCharANN::setDataFile(string dir_path, string save_path, string dir_
 						IplImage *pImg_tmp=cvLoadImage(filename,0);//读取单通道
 						if(pImg_tmp==NULL)
 						{
-							cout<<"error IdentifyCharANN::setTrainFile cvLoadImage fail"<<endl;
+							cout<<"error IdentifyCharANN::setDataFile cvLoadImage fail"<<endl;
 							break;
 						}
+						//cvShowImage("pImg_tmp",pImg_tmp);
 						Mat mat_img=pImg_tmp;
 						Mat f5=plate.getFeatureHist(mat_img,5);
 						Mat f10=plate.getFeatureHist(mat_img,10);
@@ -215,6 +218,23 @@ void IdentifyCharANN::setDataFile(string dir_path, string save_path, string dir_
 						mat_trainingData10.push_back(f10);  
 						mat_trainingData15.push_back(f15);  
 						mat_trainingData20.push_back(f20);
+						//每一幅字符图片所对应的字符类别索引下标  
+						trainingLabels.push_back(k);//一个目录即一个分类
+
+						//旋转45度后
+						ImgProcess.myAffineImage(pImg_tmp,pImg_tmp,45);
+						//cvShowImage("pImg_tmp2",pImg_tmp);
+						mat_img=pImg_tmp;
+						f5=plate.getFeatureHist(mat_img,5);
+						f10=plate.getFeatureHist(mat_img,10);
+						f15=plate.getFeatureHist(mat_img,15);
+						f20=plate.getFeatureHist(mat_img,20);
+
+						mat_trainingData5.push_back(f5);  
+						mat_trainingData10.push_back(f10);  
+						mat_trainingData15.push_back(f15);  
+						mat_trainingData20.push_back(f20);
+
 						//每一幅字符图片所对应的字符类别索引下标  
 						trainingLabels.push_back(k);//一个目录即一个分类
 					}  
@@ -243,7 +263,7 @@ void IdentifyCharANN::setDataFile(string dir_path, string save_path, string dir_
     fs << "classes" << mat_classes;  
 	fs << "classesCount" << (k+1);  
     fs.release();  
-	cout<<"IdentifyCharANN::setTrainFile end "<<endl;
+	cout<<"IdentifyCharANN::setDataFile save yml success"<<endl;
 }
 
 /****************************************
@@ -271,7 +291,7 @@ void IdentifyCharANN::setTrainFile(string dir_path,string save_path, string dir_
 	CvANN_MLP mlp;
 	if(dir_path==""||save_path==""||dir_type=="")
 	{
-		cout<<"error IdentifyCharANN::getTrainFile bad arguments "<<endl;
+		cout<<"error IdentifyCharANN::setTrainFile bad arguments "<<endl;
 		return;
 	}
 	//需要对string转化为char[]
@@ -344,7 +364,7 @@ void IdentifyCharANN::setTrainFile(string dir_path,string save_path, string dir_
 	char *xmlname=(char*)xml_tmp;
 
 	mlp.save(xmlname);
-	cout<<"plateSVMTrain save xml success"<<endl;
+	cout<<"IdentifyCharANN::setTrainFile save xml success"<<endl;
 }
 
 ///****************************************
@@ -393,6 +413,7 @@ datatype
 ******************************************/
 int IdentifyCharANN::getPredictPosition(IplImage *pImg_src,string xml_path,string dir_type,int datatype)
 {
+	IplImageProcessing ImgProcess;
 	PlateChar plate;
 	CvANN_MLP mlp;
 	Mat sample_mat,img_mat;
@@ -400,6 +421,7 @@ int IdentifyCharANN::getPredictPosition(IplImage *pImg_src,string xml_path,strin
 	Mat mat_trainingData10;
 	Mat mat_trainingData15;
 	Mat mat_trainingData20;
+	IplImage *pImg_tmp=NULL;
 
 	if(pImg_src==NULL||xml_path==""||dir_type=="")
 	{
@@ -420,6 +442,28 @@ int IdentifyCharANN::getPredictPosition(IplImage *pImg_src,string xml_path,strin
 	Mat f10=plate.getFeatureHist(img_mat,10);
 	Mat f15=plate.getFeatureHist(img_mat,15);
 	Mat f20=plate.getFeatureHist(img_mat,20);
+
+	mat_trainingData5.push_back(f5);  
+	mat_trainingData10.push_back(f10);  
+	mat_trainingData15.push_back(f15);  
+	mat_trainingData20.push_back(f20);
+
+	//旋转45度后
+	pImg_tmp=cvCreateImage(cvGetSize(pImg_src), IPL_DEPTH_8U,1);
+	ImgProcess.myAffineImage(pImg_src,pImg_tmp,45);
+	//cvShowImage("pImg_tmp2",pImg_tmp);
+	img_mat=pImg_tmp;
+	f5=plate.getFeatureHist(img_mat,5);
+	f10=plate.getFeatureHist(img_mat,10);
+	f15=plate.getFeatureHist(img_mat,15);
+	f20=plate.getFeatureHist(img_mat,20);
+
+	mat_trainingData5.push_back(f5);  
+	mat_trainingData10.push_back(f10);  
+	mat_trainingData15.push_back(f15);  
+	mat_trainingData20.push_back(f20);
+	//释放资源
+	cvReleaseImage(&pImg_tmp);
 	//如何整合4个矩阵？
 	switch(datatype)
 	{
