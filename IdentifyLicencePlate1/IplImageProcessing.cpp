@@ -975,11 +975,11 @@ mySearchVerPosition
 src
 单通道源图片
 
-x1
-左列开始位置
+y1
+上行开始位置
 
-x2
-右列结束位置
+y2
+下行结束位置
 
 nTimes
 行阀值
@@ -988,8 +988,8 @@ void IplImageProcessing::mySearchVerPosition(IplImage* pImg_src,int &y1,int &y2,
 {
 	bool flag_row_top=false;
 	bool flag_row_bottom=false;
-	float yscale=0.3;
 	float xscale=0.2;
+	float yscale=0.4;
 	int left=pImg_src->width*xscale;
 	int right=pImg_src->width*(1-xscale);
 
@@ -999,24 +999,15 @@ void IplImageProcessing::mySearchVerPosition(IplImage* pImg_src,int &y1,int &y2,
 		return;
 	}
 	//查询上行
-	for(int i=1,top=pImg_src->height*yscale;i<=top&&!flag_row_top;i++)
+	for(int i=y1+1,top=pImg_src->height*yscale;i<=top&&!flag_row_top;i++)
 	{
 		int count=0,nw=0;
 		for(int j=left;j<right;j++)
 		{   
 			if(CV_IMAGE_ELEM(pImg_src,unsigned char,i,j)!=CV_IMAGE_ELEM(pImg_src,unsigned char,i+1,j))
 			{
-				if(nw>=3)
-				{
-					count++;
-				}
-				nw=0;
+				count++;
 			}
-			else
-			{
-				nw++;
-			}
-			
 			if(count>=nTimes)
 			{
 				y1 = i;
@@ -1027,23 +1018,16 @@ void IplImageProcessing::mySearchVerPosition(IplImage* pImg_src,int &y1,int &y2,
 	}
 
 	//查询下行
-	for(int i=pImg_src->height-2,bottom=pImg_src->height*(1-yscale);i>=bottom&&!flag_row_bottom;i--)
+	for(int i=y2-1,bottom=pImg_src->height*(1-yscale);i>=bottom&&!flag_row_bottom;i--)
 	{
 		int count=0,nw=0;
 		for(int j=left;j<right;j++)
 		{   
 			if(CV_IMAGE_ELEM(pImg_src,unsigned char,i,j)!=CV_IMAGE_ELEM(pImg_src,unsigned char,i-1,j))
 			{
-				if(nw>=3)
-				{
-					count++;
-				}
-				nw=0;
+				count++;
 			}
-			else
-			{
-				nw++;
-			}
+			
 			if(count>=nTimes)
 			{
 				y2 = i;

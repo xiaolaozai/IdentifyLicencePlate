@@ -166,26 +166,42 @@ int _tmain(int argc, _TCHAR* argv[])
 			cvShowImage("pImg_selectRecorrect",pImg_selectRecorrect);
 
 			pImg_selectThreshold=cvCreateImage(cvGetSize(pImg_selectRecorrect), IPL_DEPTH_8U,1);
+			pImg_PlateAdaptiveThreshold=cvCreateImage(cvGetSize(pImg_selectRecorrect), IPL_DEPTH_8U,1);
+
+			//车牌位置
 			pImgProcess->myGetPlateBackColor(pImg_selectRecorrect,pImg_selectThreshold,colorType);
 			cvThreshold(pImg_selectThreshold,pImg_selectThreshold,0,255,CV_THRESH_OTSU);
 			cvShowImage("pImg_selectThreshold",pImg_selectThreshold);
 
-			//显示行列直方图
-			pImg_hist=cvCreateImage(cvSize(200,100), IPL_DEPTH_8U,3);
-			pPlate->showHistogram(pImg_selectThreshold,pImg_hist,0);
-			cvShowImage("pImg_hist_x",pImg_hist);
-			pPlate->showHistogram(pImg_selectThreshold,pImg_hist,1);
-			cvShowImage("pImg_hist_y",pImg_hist);
+			//原图像灰度化
+			pImg_selectGray=cvCreateImage(cvGetSize(pImg_selectRecorrect), IPL_DEPTH_8U,1);
+			pImg_selectGray=pImgProcess->myRGB2Gray(pImg_selectRecorrect,pImg_selectGray);
+			cvShowImage("pImg_selectRecorrect2",pImg_selectRecorrect);
+			cvShowImage("pImg_selectGray2",pImg_selectGray);
+
+			pImg_PlateAdaptiveThreshold=pImgProcess->myThreshold(pImg_selectGray,0);
+			cvShowImage("pImg_PlateAdaptiveThreshold2",pImg_PlateAdaptiveThreshold);
+
+			////显示行列直方图
+			//pImg_hist=cvCreateImage(cvSize(200,100), IPL_DEPTH_8U,3);
+			//pPlate->showHistogram(pImg_selectThreshold,pImg_hist,0);
+			//cvShowImage("pImg_hist_x",pImg_hist);
+			//pPlate->showHistogram(pImg_selectThreshold,pImg_hist,1);
+			//cvShowImage("pImg_hist_y",pImg_hist);
 
 			int x0=0,x1=pImg_selectThreshold->width;
 			int y0=0,y1=pImg_selectThreshold->height;
 			float xT=0.83;
-			float yT=0.850;
+			float yT=0.85;
 			pPlate->getPlatePosition(pImg_selectThreshold,x0,x1, xT,y0,y1,yT);
+
+			int nTimes=13;
+			pImgProcess->mySearchVerPosition(pImg_PlateAdaptiveThreshold,y0,y1,nTimes);
+			//goto Release;
 
 			int cutW=x1-x0;
 			int cutH=y1-y0;
-			int sy=cutH/10;
+			int sy=0;
 			int sx=0;
 			if(cutW>80)
 			{
